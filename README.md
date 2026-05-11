@@ -22,12 +22,12 @@ mentis/
 | Capa | Tecnología |
 |------|------------|
 | **Frontend Web** | React 18, Vite, Axios, React Router |
-| **Backend Admin** | Django 4.2, Django REST Framework, PostgreSQL |
+| **Backend Admin** | Django 4.2, Django REST Framework, MySQL |
 | **Backend Evaluaciones** | Spring Boot 3, Java 17, JPA |
 | **Mobile** | Kotlin, Jetpack Compose, Retrofit |
-| **Base de Datos** | PostgreSQL 15 |
+| **Base de Datos** | MySQL 8.0 (XAMPP) |
 | **IA** | OpenAI API (GPT-4) |
-| **DevOps** | Git, GitHub, Docker (opcional) |
+| **DevOps** | Git, GitHub |
 
 ## 🏃 Plan de Sprints
 
@@ -42,6 +42,12 @@ mentis/
 📄 Ver detalles en [`docs/sprint-1.md`](docs/sprint-1.md)
 
 ## 🚀 Setup Rápido
+
+### Base de Datos (MySQL)
+1. Abrir XAMPP Control Panel
+2. Start Apache y MySQL
+3. Abrir phpMyAdmin (http://localhost/phpmyadmin)
+4. Crear database: `mentis_db`
 
 ### Backend Django
 ```bash
@@ -60,19 +66,13 @@ npm install
 npm run dev
 ```
 
-### Base de Datos
-```sql
-CREATE DATABASE mentis_db;
-CREATE USER mentis_user WITH PASSWORD 'tu_password';
-GRANT ALL PRIVILEGES ON DATABASE mentis_db TO mentis_user;
-```
-
 ## 📊 Flujo del Sistema
 
 ```
-RRHH crea vacante → 2. Candidato se registra → 3. IA analiza CV →
- Sistema clasifica → 5. Envía evaluación → 6. Candidato responde →
-IA evalúa respuestas → 8. RRHH revisa finalistas
+1. RRHH crea vacante → 2. Candidato se registra → 
+3. IA analiza CV → 4. Sistema clasifica → 
+5. Envía evaluación → 6. Candidato responde →
+7. IA evalúa respuestas → 8. RRHH revisa finalistas
 ```
 
 ## 👥 Equipo Scrum
