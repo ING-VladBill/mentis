@@ -7,43 +7,43 @@
 ## 🎯 Objetivos del Sprint
 
 - [x] Configurar repositorio Git y estructura de proyecto
-- [ ] Setup Django + MySQL
-- [ ] Crear modelos Vacante y Candidato
-- [ ] Implementar API REST con DRF
-- [ ] Setup React + Axios
-- [ ] Crear vistas de gestión de vacantes
-- [ ] Implementar formulario de registro de candidatos
+- [X] Setup Django + MySQL
+- [X] Crear modelos Vacante y Candidato
+- [X] Implementar API REST con DRF
+- [X] Setup React + Axios
+- [X] Crear vistas de gestión de vacantes
+- [X] Implementar formulario de registro de candidatos
 
 ## 📋 Tareas Detalladas
 
 ### Backend (Django)
-- [ ] Instalar Django, DRF, mysqlclient, django-cors-headers
-- [ ] Crear apps: `vacantes`, `candidatos`
-- [ ] Configurar `settings.py` con MySQL
-- [ ] Modelo `Vacante`: título, descripción, requisitos, estado, fecha_creacion
-- [ ] Modelo `Candidato`: nombre, email, teléfono, cv (FileField), vacante (FK)
-- [ ] Serializers para ambos modelos
-- [ ] ViewSets con CRUD completo
+- [X] Instalar Django, DRF, mysqlclient, django-cors-headers
+- [X] Crear apps: `vacantes`, `candidatos`
+- [X] Configurar `settings.py` con MySQL
+- [X] Modelo `Vacante`: título, descripción, requisitos, estado, fecha_creacion
+- [X] Modelo `Candidato`: nombre, email, teléfono, cv (FileField), vacante (FK)
+- [X] Serializers para ambos modelos
+- [X] ViewSets con CRUD completo
 - [ ] Configurar URLs y CORS
-- [ ] Probar endpoints en Postman
+- [X] Probar endpoints en Postman
 
 ### Frontend (React)
-- [ ] Setup con Vite
-- [ ] Instalar Axios, React Router
-- [ ] Estructura de carpetas: components, pages, services, utils
-- [ ] Página `VacantesList.jsx` con tabla
-- [ ] Página `VacanteForm.jsx` para crear/editar
+- [X] Setup con Vite
+- [X] Instalar Axios, React Router
+- [X] Estructura de carpetas: components, pages, services, utils
+- [X] Página `VacantesList.jsx` con tabla
+- [X] Página `VacanteForm.jsx` para crear/editar
 - [ ] Página `CandidatoList.jsx` con tabla
-- [ ] Página `CandidatoForm.jsx` con upload de CV
-- [ ] Service `api.js` para centralizar llamadas Axios
-- [ ] Routing básico
+- [X] Página `CandidatoForm.jsx` con upload de CV
+- [X] Service `api.js` para centralizar llamadas Axios
+- [X] Routing básico
 
 ### Base de Datos
-- [ ] Iniciar MySQL desde XAMPP
-- [ ] Crear database `mentis_db` en phpMyAdmin
-- [ ] Configurar Django para usar MySQL (mysqlclient)
-- [ ] Ejecutar migraciones Django
-- [ ] Verificar tablas creadas en phpMyAdmin
+- [X] Iniciar MySQL desde XAMPP
+- [X] Crear database `mentis_db` en phpMyAdmin
+- [X] Configurar Django para usar MySQL (mysqlclient)
+- [X] Ejecutar migraciones Django
+- [X] Verificar tablas creadas en phpMyAdmin
 
 ## 📦 Entregables
 
