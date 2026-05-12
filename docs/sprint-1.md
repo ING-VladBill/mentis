@@ -7,7 +7,7 @@
 ## 🎯 Objetivos del Sprint
 
 - [x] Configurar repositorio Git y estructura de proyecto
-- [ ] Setup Django + PostgreSQL
+- [ ] Setup Django + MySQL
 - [ ] Crear modelos Vacante y Candidato
 - [ ] Implementar API REST con DRF
 - [ ] Setup React + Axios
@@ -17,9 +17,9 @@
 ## 📋 Tareas Detalladas
 
 ### Backend (Django)
-- [ ] Instalar Django, DRF, psycopg2, django-cors-headers
+- [ ] Instalar Django, DRF, mysqlclient, django-cors-headers
 - [ ] Crear apps: `vacantes`, `candidatos`
-- [ ] Configurar `settings.py` con PostgreSQL
+- [ ] Configurar `settings.py` con MySQL
 - [ ] Modelo `Vacante`: título, descripción, requisitos, estado, fecha_creacion
 - [ ] Modelo `Candidato`: nombre, email, teléfono, cv (FileField), vacante (FK)
 - [ ] Serializers para ambos modelos
@@ -50,7 +50,7 @@
 - ⏳ API REST funcional con endpoints `/api/vacantes/` y `/api/candidatos/`
 - ⏳ Frontend React conectado al backend
 - ⏳ Subida de archivos CV funcionando
-- ⏳ Base de datos PostgreSQL configurada
+- ⏳ Base de datos MySQL configurada
 
 ## 🧪 Criterios de Aceptación
 
@@ -77,6 +77,7 @@ npm run dev
 - El upload de CV usa `multipart/form-data`
 - CORS configurado para `http://localhost:5173` (Vite)
 - Archivo `.env` no se sube a Git (credenciales DB)
+- Base de datos: MySQL 8.0 via XAMPP (puerto 3306)
 
 ---
 
