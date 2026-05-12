@@ -33,6 +33,7 @@
 - [ ] Estructura de carpetas: components, pages, services, utils
 - [ ] Página `VacantesList.jsx` con tabla
 - [ ] Página `VacanteForm.jsx` para crear/editar
+- [ ] Página `CandidatoList.jsx` con tabla
 - [ ] Página `CandidatoForm.jsx` con upload de CV
 - [ ] Service `api.js` para centralizar llamadas Axios
 - [ ] Routing básico
