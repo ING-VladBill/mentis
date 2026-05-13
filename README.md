@@ -33,7 +33,7 @@ mentis/
 
 | Sprint | Duración | Estado | Objetivos |
 |--------|----------|--------|-----------|
-| **Sprint 1** | 2 días | 🟢 En progreso | Fundación: CRUD vacantes y candidatos |
+| **Sprint 1** | 2 días | 🔵 Completado | Fundación: CRUD vacantes y candidatos |
 | **Sprint 2** | 3 días | ⚪ Pendiente | IA: Análisis automático de CV |
 | **Sprint 3** | 3 días | ⚪ Pendiente | Evaluaciones técnicas automatizadas |
 | **Sprint 4** | 3 días | ⚪ Pendiente | Entrevista con IA |
