@@ -3,34 +3,38 @@ from .models import Vacante
 
 @admin.register(Vacante)
 class VacanteAdmin(admin.ModelAdmin):
-    list_display = ['codigo', 'titulo', 'area', 'nivel_experiencia', 'estado', 'fecha_creacion']
-    list_filter = ['estado', 'nivel_experiencia', 'modalidad', 'area']
-    search_fields = ['titulo', 'codigo', 'area', 'tecnologias']
-    readonly_fields = ['fecha_creacion', 'fecha_actualizacion']
-    
+    list_display    = ['codigo', 'titulo', 'area', 'nivel_experiencia', 'estado', 'prioridad', 'fecha_creacion']
+    list_filter     = ['area', 'estado', 'prioridad', 'nivel_experiencia', 'modalidad']
+    search_fields   = ['codigo', 'titulo', 'descripcion']
+    ordering        = ['-fecha_creacion']
+    readonly_fields = ['codigo', 'fecha_creacion', 'fecha_modificacion']
+
     fieldsets = (
         ('Información Básica', {
-            'fields': ('codigo', 'titulo', 'area', 'departamento')
+            'fields': ('codigo', 'titulo', 'area', 'departamento', 'industria')
         }),
         ('Descripción', {
-            'fields': ('descripcion', 'requisitos', 'responsabilidades', 'beneficios')
+            'fields': ('descripcion', 'responsabilidades', 'requisitos', 'requisitos_deseables', 'beneficios')
         }),
         ('Habilidades', {
-            'fields': ('habilidades', 'tecnologias', 'idiomas')
+            'fields': ('habilidades', 'tecnologias', 'conocimientos_especificos')
         }),
-        ('Detalles del Puesto', {
-            'fields': ('nivel_experiencia', 'modalidad', 'tipo_contrato', 'numero_vacantes', 'prioridad')
+        ('Nivel y Experiencia', {
+            'fields': ('nivel_experiencia', 'anios_experiencia', 'nivel_educativo', 'carrera_afin')
         }),
-        ('Ubicación', {
-            'fields': ('pais', 'ciudad', 'direccion')
+        ('Condiciones', {
+            'fields': ('modalidad', 'tipo_contrato', 'ciudad', 'pais', 'ubicacion')
         }),
         ('Salario', {
-            'fields': ('salario_minimo', 'salario_maximo', 'moneda')
+            'fields': ('salario_minimo', 'salario_maximo', 'moneda', 'mostrar_salario')
         }),
-        ('Estado y Fechas', {
-            'fields': ('estado', 'fecha_cierre', 'fecha_creacion', 'fecha_actualizacion')
+        ('Estado', {
+            'fields': ('estado', 'prioridad', 'fecha_publicacion', 'fecha_cierre')
+        }),
+        ('Configuración IA', {
+            'fields': ('score_cv_minimo', 'nota_minima_examen', 'top_candidatos_finalistas')
         }),
         ('Auditoría', {
-            'fields': ('creado_por',)
+            'fields': ('creado_por', 'fecha_creacion', 'fecha_modificacion')
         }),
     )
