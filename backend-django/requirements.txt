@@ -26,8 +26,8 @@ Pillow==11.2.1
 PyPDF2==3.0.1
 pdfminer.six==20231228  # fallback para PDFs complejos
 
-# OpenAI API
-openai==1.82.0
+# IA Generativa (Google Gemini)
+google-generativeai==0.8.3
 
 # Correos HTML
 # (incluido en Django, solo necesitamos el motor SMTP)

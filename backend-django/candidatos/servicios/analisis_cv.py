@@ -9,13 +9,14 @@ from typing import Optional
 
 import PyPDF2
 from pdfminer.high_level import extract_text as pdfminer_extract
-from openai import OpenAI
+import google.generativeai as genai
 from django.conf import settings
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+# Configurar Gemini
+genai.configure(api_key=settings.GEMINI_API_KEY)
 
 
 # ------------------------------------------
@@ -62,7 +63,7 @@ def _limpiar_texto(texto: str) -> str:
 
 
 # ------------------------------------------
-# ANÁLISIS DE CV CON IA
+# ANÁLISIS DE CV CON IA (GEMINI)
 # ------------------------------------------
 
 def analizar_cv(candidato, vacante) -> dict:
@@ -76,28 +77,23 @@ def analizar_cv(candidato, vacante) -> dict:
     prompt = _construir_prompt_analisis(candidato, vacante)
 
     try:
-        respuesta = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            max_tokens=settings.OPENAI_MAX_TOKENS,
-            temperature=0.3,  # Más determinístico para análisis
-            messages=[
-                {
-                    'role': 'system',
-                    'content': (
-                        'Eres un experto reclutador con 15 años de experiencia evaluando candidatos. '
-                        'Analizas CVs de manera objetiva y siempre respondes ÚNICAMENTE con JSON válido, '
-                        'sin texto adicional antes ni después del JSON.'
-                    )
-                },
-                {
-                    'role': 'user',
-                    'content': prompt
-                }
-            ]
+        model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            generation_config={
+                'temperature': 0.3,              # Más determinístico para análisis
+                'response_mime_type': 'application/json',  # Fuerza JSON limpio, sin markdown
+            },
+            system_instruction=(
+                'Eres un experto reclutador con 15 años de experiencia evaluando candidatos. '
+                'Analizas CVs de manera objetiva y siempre respondes ÚNICAMENTE con JSON válido, '
+                'sin texto adicional antes ni después del JSON.'
+            )
         )
 
-        contenido = respuesta.choices[0].message.content.strip()
-        # Limpiar posibles marcadores markdown
+        respuesta = model.generate_content(prompt)
+        contenido = respuesta.text.strip()
+
+        # Limpiar posibles marcadores markdown por si acaso
         if contenido.startswith('```'):
             contenido = contenido.split('```')[1]
             if contenido.startswith('json'):
@@ -108,24 +104,29 @@ def analizar_cv(candidato, vacante) -> dict:
         return _procesar_resultado_analisis(resultado, candidato, vacante)
 
     except json.JSONDecodeError as e:
-        logger.error(f'Error parseando JSON de OpenAI: {e}')
+        logger.error(f'Error parseando JSON de Gemini: {e}')
         raise ValueError('La IA devolvió un formato inválido. Intenta nuevamente.')
     except Exception as e:
-        logger.error(f'Error llamando a OpenAI: {e}')
+        logger.error(f'Error llamando a Gemini: {e}')
         raise
 
 
 def _construir_prompt_analisis(candidato, vacante) -> str:
-    """Construye el prompt adaptado al área de la vacante."""
+    """
+    Construye el prompt adaptado al área de la vacante.
+    Usa la instrucción del modelo Area (configurable por el admin).
+    """
 
-    instruccion_area = _get_instruccion_por_area(vacante.area)
+    # Tomar la instrucción del Area (configurable desde el admin)
+    instruccion_area = vacante.area.get_instruccion_ia()
 
     return f"""
 Analiza este CV para la siguiente vacante. RESPONDE SOLO CON JSON.
 
 === VACANTE ===
 Título: {vacante.titulo}
-Área: {vacante.get_area_display()}
+Área: {vacante.area.nombre}
+Código de área: {vacante.area.codigo_corto}
 Nivel: {vacante.get_nivel_experiencia_display()}
 Años de experiencia requeridos: {vacante.anios_experiencia}+
 Nivel educativo requerido: {vacante.nivel_educativo or 'No especificado'}
@@ -181,56 +182,6 @@ Score total 0-100 distribuido así:
 """
 
 
-def _get_instruccion_por_area(area: str) -> str:
-    """Devuelve instrucciones específicas según el área de la vacante."""
-    instrucciones = {
-        'tecnologia': (
-            'Evalúa conocimientos técnicos: lenguajes de programación, frameworks, arquitectura, '
-            'bases de datos, herramientas DevOps, metodologías ágiles. Verifica proyectos reales. '
-            'Para roles senior, valora liderazgo técnico y decisiones de arquitectura.'
-        ),
-        'ventas': (
-            'Evalúa experiencia en ventas B2B/B2C, manejo de CRM (Salesforce, HubSpot), '
-            'técnicas de cierre, manejo de objeciones, métricas de ventas (cuotas, conversión). '
-            'Valora logros concretos con números: porcentaje de cuota alcanzada, cartera de clientes.'
-        ),
-        'marketing': (
-            'Evalúa conocimiento de marketing digital, SEO/SEM, redes sociales, analítica web '
-            '(Google Analytics, Meta Ads), gestión de campañas, métricas (ROAS, CTR, CAC). '
-            'Valora portfolio de campañas y casos de éxito medibles.'
-        ),
-        'legal': (
-            'Evalúa formación jurídica, especialidad legal, conocimiento de legislación aplicable, '
-            'experiencia en contratos, litigios o compliance. Para roles senior, valora gestión de equipos '
-            'y toma de decisiones estratégicas legales.'
-        ),
-        'rrhh': (
-            'Evalúa conocimiento de legislación laboral local, procesos de reclutamiento, '
-            'gestión del desempeño, desarrollo organizacional y herramientas HRIS. '
-            'Valora indicadores de gestión: tiempo de contratación, retención, clima laboral.'
-        ),
-        'finanzas': (
-            'Evalúa conocimientos contables, NIIF/IFRS, análisis financiero, modelado financiero, '
-            'herramientas (Excel avanzado, SAP, ERP). Valora precisión, experiencia en auditorías '
-            'y manejo de presupuestos de la magnitud requerida.'
-        ),
-        'operaciones': (
-            'Evalúa experiencia en gestión de procesos, optimización, KPIs operativos, '
-            'metodologías (Lean, Six Sigma), gestión de equipos y proveedores. '
-            'Valora mejoras concretas implementadas con impacto medible.'
-        ),
-        'diseno': (
-            'Evalúa dominio de herramientas de diseño (Figma, Adobe Suite), portafolio de trabajos, '
-            'conocimiento de principios de diseño UX/UI, experiencia con sistemas de diseño. '
-            'La experiencia práctica es más valorada que la formación teórica.'
-        ),
-    }
-    return instrucciones.get(area, (
-        'Evalúa el nivel de conocimientos específicos del área según los requisitos de la vacante. '
-        'Considera la experiencia práctica, formación académica y logros concretos en el área.'
-    ))
-
-
 def _procesar_resultado_analisis(resultado: dict, candidato, vacante) -> dict:
     """
     Procesa el resultado de la IA y actualiza el candidato en la BD.
@@ -245,11 +196,11 @@ def _procesar_resultado_analisis(resultado: dict, candidato, vacante) -> dict:
     pasa_filtro = score >= score_minimo
 
     # Actualizar candidato con los datos de la IA
-    candidato.cv_analizado        = True
-    candidato.fecha_analisis_cv   = timezone.now()
-    candidato.score_cv            = score
-    candidato.clasificacion_ia    = clasificacion
-    candidato.resumen_cv          = resultado.get('resumen', '')
+    candidato.cv_analizado           = True
+    candidato.fecha_analisis_cv      = timezone.now()
+    candidato.score_cv               = score
+    candidato.clasificacion_ia       = clasificacion
+    candidato.resumen_cv             = resultado.get('resumen', '')
     candidato.habilidades_detectadas = resultado.get('habilidades_detectadas', [])
     candidato.habilidades_faltantes  = resultado.get('habilidades_faltantes', [])
     candidato.inconsistencias_cv     = resultado.get('inconsistencias', [])
@@ -290,7 +241,7 @@ def _procesar_resultado_analisis(resultado: dict, candidato, vacante) -> dict:
 
 def procesar_cv_individual(archivo_pdf, vacante_id: int, usuario_rrhh) -> dict:
     """
-    Procesa un único PDF: extrae texto, extrae datos básicos con IA, crea candidato.
+    Procesa un único PDF: extrae texto, extrae datos básicos con regex, crea candidato.
     Usado en la carga masiva.
     """
     from candidatos.models import Candidato
