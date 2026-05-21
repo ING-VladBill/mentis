@@ -181,11 +181,10 @@ if DEBUG and not EMAIL_HOST_USER:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # ------------------------------------------
-# OPENAI
+# IA GENERATIVA - Google Gemini
 # ------------------------------------------
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
-OPENAI_MODEL = 'gpt-4o'
-OPENAI_MAX_TOKENS = 4000
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GEMINI_MODEL = 'gemini-2.5-flash'
 
 # ------------------------------------------
 # ARCHIVOS
