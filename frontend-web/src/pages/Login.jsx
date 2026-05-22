@@ -1,12 +1,25 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../App';
 import api from '../services/api';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [form, setForm]     = useState({ email: '', password: '' });
-  const [error, setError]   = useState(null);
-  const [loading, setLoad]  = useState(false);
+  const { dark, toggle } = useTheme();
+
+  const [form, setForm]    = useState({ email: '', password: '' });
+  const [error, setError]  = useState(null);
+  const [loading, setLoad] = useState(false);
+
+  const bg         = dark ? '#0f0f14'                : '#f4f4f8';
+  const cardBg     = dark ? '#1a1a24'                : '#ffffff';
+  const cardBorder = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  const textMain   = dark ? '#f0f0f0'                : '#111118';
+  const textSub    = dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.4)';
+  const labelColor = dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.5)';
+  const inputBg    = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+  const inputBdr   = dark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.12)';
+  const footerClr  = dark ? 'rgba(255,255,255,0.2)'  : 'rgba(0,0,0,0.25)';
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -17,18 +30,14 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     setLoad(true);
-
     try {
       const { data } = await api.post('/api/auth/login/', {
         email:    form.email,
         password: form.password,
       });
-
-      // Guardar tokens y datos del usuario
       localStorage.setItem('access_token',  data.access);
       localStorage.setItem('refresh_token', data.refresh);
       localStorage.setItem('usuario',       JSON.stringify(data.usuario));
-
       navigate('/vacantes');
     } catch (err) {
       const msg = err.response?.data?.mensaje
@@ -43,46 +52,67 @@ export default function Login() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0f0f14',
+      background: bg,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       padding: 24,
+      transition: 'background 0.3s',
     }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
 
-        {/* Logo */}
+        {/* Logo — es el botón de cambio de tema */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{
-            width: 52, height: 52,
-            background: 'linear-gradient(140deg, #7c3aed 10%, #4f46e5 90%)',
-            borderRadius: 14,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px',
-            boxShadow: '0 0 30px rgba(124,58,237,0.4)',
-          }}>
-            <i className="ti ti-brain" style={{ fontSize: 26, color: '#fff' }} />
-          </div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: '#f0f0f0', letterSpacing: '0.06em' }}>
+          <button
+            onClick={toggle}
+            title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            style={{
+              width: 56, height: 56,
+              background: 'linear-gradient(140deg, #7c3aed 10%, #4f46e5 90%)',
+              borderRadius: 16,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px',
+              boxShadow: '0 0 30px rgba(124,58,237,0.4)',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 26,
+              transition: 'transform 0.2s, box-shadow 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'scale(1.08)';
+              e.currentTarget.style.boxShadow = '0 0 40px rgba(124,58,237,0.6)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 0 30px rgba(124,58,237,0.4)';
+            }}
+          >
+            {/* Sol cuando oscuro (click → claro), Luna cuando claro (click → oscuro) */}
+            {dark ? '☀️' : '🌙'}
+          </button>
+
+          <div style={{ fontSize: 26, fontWeight: 700, color: textMain, letterSpacing: '0.06em', transition: 'color 0.3s' }}>
             MENTIS
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
+          <div style={{ fontSize: 13, color: textSub, marginTop: 4, transition: 'color 0.3s' }}>
             Sistema de Reclutamiento IA
           </div>
         </div>
 
         {/* Card */}
         <div style={{
-          background: '#1a1a24',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: cardBg,
+          border: `1px solid ${cardBorder}`,
           borderRadius: 14,
           padding: '32px 28px',
+          transition: 'background 0.3s, border-color 0.3s',
+          boxShadow: dark ? 'none' : '0 4px 24px rgba(0,0,0,0.08)',
         }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#f0f0f0', marginBottom: 4 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: textMain, marginBottom: 4, transition: 'color 0.3s' }}>
             Iniciar sesión
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginBottom: 24 }}>
+          <div style={{ fontSize: 13, color: textSub, marginBottom: 24, transition: 'color 0.3s' }}>
             Ingresa con tu cuenta de RRHH
           </div>
 
@@ -105,7 +135,7 @@ export default function Login() {
 
             {/* Email */}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: labelColor, marginBottom: 6, transition: 'color 0.3s' }}>
                 Correo electrónico
               </label>
               <input
@@ -117,20 +147,21 @@ export default function Login() {
                 placeholder="admin@mentis.com"
                 style={{
                   width: '100%', boxSizing: 'border-box',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: inputBg,
+                  border: `1px solid ${inputBdr}`,
                   borderRadius: 8, padding: '10px 12px',
-                  fontSize: 14, color: '#f0f0f0',
+                  fontSize: 14, color: textMain,
                   outline: 'none', fontFamily: 'inherit',
+                  transition: 'background 0.3s, border-color 0.2s, color 0.3s',
                 }}
                 onFocus={e => e.target.style.borderColor = 'rgba(124,58,237,0.6)'}
-                onBlur={e  => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                onBlur={e  => e.target.style.borderColor = inputBdr}
               />
             </div>
 
             {/* Password */}
             <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: labelColor, marginBottom: 6, transition: 'color 0.3s' }}>
                 Contraseña
               </label>
               <input
@@ -142,18 +173,19 @@ export default function Login() {
                 placeholder="••••••••"
                 style={{
                   width: '100%', boxSizing: 'border-box',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: inputBg,
+                  border: `1px solid ${inputBdr}`,
                   borderRadius: 8, padding: '10px 12px',
-                  fontSize: 14, color: '#f0f0f0',
+                  fontSize: 14, color: textMain,
                   outline: 'none', fontFamily: 'inherit',
+                  transition: 'background 0.3s, border-color 0.2s, color 0.3s',
                 }}
                 onFocus={e => e.target.style.borderColor = 'rgba(124,58,237,0.6)'}
-                onBlur={e  => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                onBlur={e  => e.target.style.borderColor = inputBdr}
               />
             </div>
 
-            {/* Botón */}
+            {/* Botón ingresar */}
             <button
               type="submit"
               disabled={loading}
@@ -187,7 +219,7 @@ export default function Login() {
         </div>
 
         {/* Footer */}
-        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>
+        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: footerClr, transition: 'color 0.3s' }}>
           MENTIS · Sprint 2 · Tecsup 2026
         </div>
 
