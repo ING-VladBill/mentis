@@ -71,7 +71,7 @@ export default function VacanteForm() {
     borderRadius: 8, padding: '9px 12px',
     fontSize: 13.5, color: t.text,
     outline: 'none', transition: 'border-color 0.15s', fontFamily: 'inherit',
-  };
+};
   const section = {
     background: t.card, border: `1px solid ${t.cardBorder}`,
     borderRadius: 12, padding: '22px 24px', marginBottom: 16,
