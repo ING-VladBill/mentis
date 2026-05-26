@@ -8,6 +8,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 from vacantes.views import VacanteViewSet, AreaViewSet
 from candidatos.views import CandidatoViewSet
@@ -26,6 +27,12 @@ router.register(r'candidatos', CandidatoViewSet, basename='candidato')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # Swagger / OpenAPI
+    path('api/schema/',          SpectacularAPIView.as_view(),        name='schema'),
+    path('api/docs/',            SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/',           SpectacularRedocView.as_view(url_name='schema'),   name='redoc'),
+
 
     # Auth
     path('api/auth/login/',               LoginRRHHView.as_view(),          name='auth-login'),
