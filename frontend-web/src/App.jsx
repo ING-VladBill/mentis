@@ -9,6 +9,9 @@ import VacantesList   from './pages/VacantesList';
 import VacanteForm    from './pages/VacanteForm';
 import CandidatoForm  from './pages/CandidatoForm';
 import CandidatosList from './pages/CandidatosList';
+import Areas          from './pages/Areas';
+import Usuarios         from './pages/Usuarios';
+import CandidatoDetalle from './pages/CandidatoDetalle';
 import Login          from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import api            from './services/api';
@@ -73,8 +76,10 @@ function Sidebar() {
     : nombre.slice(0, 2).toUpperCase();
 
   const NAV_MAIN = [
-    { to: '/vacantes',   icon: 'ti-briefcase', label: 'Vacantes'   },
-    { to: '/candidatos', icon: 'ti-users',      label: 'Candidatos' },
+    { to: '/vacantes',   icon: 'ti-briefcase',    label: 'Vacantes'   },
+    { to: '/candidatos', icon: 'ti-users',         label: 'Candidatos' },
+    { to: '/areas',      icon: 'ti-layout-grid',   label: 'Áreas'      },
+    { to: '/usuarios',   icon: 'ti-users-group',   label: 'Usuarios'   },
   ];
   const NAV_SOON = [
     { icon: 'ti-checklist',    label: 'Evaluaciones'   },
@@ -289,14 +294,19 @@ const PAGE_META = {
   '/vacantes/nueva':       { title: 'Nueva vacante',       subtitle: 'Crear una nueva posición' },
   '/candidatos':           { title: 'Candidatos',          subtitle: 'Listado de todos los postulantes' },
   '/candidatos/registrar': { title: 'Registrar candidato', subtitle: 'Agregar nuevo postulante' },
+  '/areas':                { title: 'Áreas',               subtitle: 'Gestiona las áreas del sistema' },
+  '/usuarios':             { title: 'Usuarios',            subtitle: 'Equipo de recursos humanos' },
 };
 
 function Layout() {
   const { t } = useTheme();
   const location = useLocation();
-  const editMatch = location.pathname.match(/^\/vacantes\/(\d+)\/editar$/);
+  const editMatch      = location.pathname.match(/^\/vacantes\/(\d+)\/editar$/);
+  const candidatoMatch = location.pathname.match(/^\/candidatos\/(\d+)$/);
   const meta = editMatch
-    ? { title: 'Editar vacante', subtitle: `Modificando vacante #${editMatch[1]}` }
+    ? { title: 'Editar vacante',       subtitle: `Modificando vacante #${editMatch[1]}` }
+    : candidatoMatch
+    ? { title: 'Detalle de candidato', subtitle: `Candidato #${candidatoMatch[1]}` }
     : (PAGE_META[location.pathname] || { title: 'MENTIS', subtitle: '' });
 
   return (
@@ -316,6 +326,9 @@ function Layout() {
             <Route path="/vacantes/:id/editar"  element={<ProtectedRoute><VacanteForm /></ProtectedRoute>} />
             <Route path="/candidatos/registrar" element={<ProtectedRoute><CandidatoForm /></ProtectedRoute>} />
             <Route path="/candidatos"           element={<ProtectedRoute><CandidatosList /></ProtectedRoute>} />
+            <Route path="/areas"                element={<ProtectedRoute><Areas /></ProtectedRoute>} />
+            <Route path="/usuarios"             element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
+            <Route path="/candidatos/:id"       element={<ProtectedRoute><CandidatoDetalle /></ProtectedRoute>} />
           </Routes>
         </main>
       </div>
