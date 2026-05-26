@@ -10,7 +10,6 @@ backend-django/**/staticfiles/
 *$py.class
 
 # MySQL
-*.sql
 *.dump
 
 # Node / React
