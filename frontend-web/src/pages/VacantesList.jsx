@@ -225,6 +225,14 @@ export default function VacantesList() {
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                         <button
+                          onClick={() => navigate(`/ranking?vacante_id=${v.id}`)}
+                          style={{ padding: '5px 10px', borderRadius: 7, border: `1px solid rgba(245,158,11,0.2)`, background: 'rgba(245,158,11,0.07)', color: 'rgba(245,158,11,0.7)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s' }}
+                          onMouseEnter={e => { e.currentTarget.style.color = '#f59e0b'; e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(245,158,11,0.7)'; e.currentTarget.style.background = 'rgba(245,158,11,0.07)'; }}
+                        >
+                          <i className="ti ti-trophy" style={{ fontSize: 13 }} /> Ranking
+                        </button>
+                        <button
                           onClick={() => navigate(`/vacantes/${v.id}/editar`)}
                           style={{ padding: '5px 12px', borderRadius: 7, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s' }}
                           onMouseEnter={e => { e.currentTarget.style.color = t.text; e.currentTarget.style.background = t.inputBg; }}

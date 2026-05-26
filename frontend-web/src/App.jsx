@@ -12,6 +12,8 @@ import CandidatosList from './pages/CandidatosList';
 import Areas          from './pages/Areas';
 import Usuarios         from './pages/Usuarios';
 import CandidatoDetalle from './pages/CandidatoDetalle';
+import Ranking          from './pages/Ranking';
+import CargaMasiva      from './pages/CargaMasiva';
 import Login          from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import api            from './services/api';
@@ -80,6 +82,8 @@ function Sidebar() {
     { to: '/candidatos', icon: 'ti-users',         label: 'Candidatos' },
     { to: '/areas',      icon: 'ti-layout-grid',   label: 'Áreas'      },
     { to: '/usuarios',   icon: 'ti-users-group',   label: 'Usuarios'   },
+    { to: '/ranking',      icon: 'ti-trophy',  label: 'Ranking'      },
+    { to: '/carga-masiva', icon: 'ti-files',   label: 'Carga masiva' },
   ];
   const NAV_SOON = [
     { icon: 'ti-checklist',    label: 'Evaluaciones'   },
@@ -296,6 +300,8 @@ const PAGE_META = {
   '/candidatos/registrar': { title: 'Registrar candidato', subtitle: 'Agregar nuevo postulante' },
   '/areas':                { title: 'Áreas',               subtitle: 'Gestiona las áreas del sistema' },
   '/usuarios':             { title: 'Usuarios',            subtitle: 'Equipo de recursos humanos' },
+  '/ranking':              { title: 'Ranking',             subtitle: 'Comparativa de candidatos por vacante' },
+  '/carga-masiva':         { title: 'Carga masiva',        subtitle: 'Sube múltiples CVs en un solo lote'    },
 };
 
 function Layout() {
@@ -329,6 +335,8 @@ function Layout() {
             <Route path="/areas"                element={<ProtectedRoute><Areas /></ProtectedRoute>} />
             <Route path="/usuarios"             element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
             <Route path="/candidatos/:id"       element={<ProtectedRoute><CandidatoDetalle /></ProtectedRoute>} />
+            <Route path="/ranking"              element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+            <Route path="/carga-masiva"         element={<ProtectedRoute><CargaMasiva /></ProtectedRoute>} />
           </Routes>
         </main>
       </div>

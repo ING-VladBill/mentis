@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'drf_spectacular',
 
     # Aplicaciones MENTIS
     'usuarios',
@@ -120,6 +121,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
     'EXCEPTION_HANDLER': 'mentis_backend.utils.custom_exception_handler',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # ------------------------------------------
@@ -204,10 +206,22 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 # ------------------------------------------
 MENTIS = {
     'TOKEN_ACCESO_EXPIRACION_HORAS': int(os.getenv('TOKEN_ACCESO_EXPIRACION_HORAS', 48)),
-    'SCORE_CV_MINIMO': 60,           # Score mínimo para pasar análisis CV
-    'NOTA_EXAMEN_MINIMA': 13,        # Nota mínima para pasar examen (sobre 20)
-    'TOP_CANDIDATOS_DEFAULT': 5,     # Top N para entrevista presencial
+    'SCORE_CV_MINIMO': 60,
+    'NOTA_EXAMEN_MINIMA': 13,
+    'TOP_CANDIDATOS_DEFAULT': 5,
     'FRONTEND_URL': os.getenv('FRONTEND_URL', 'http://localhost:5173'),
+}
+
+# ------------------------------------------
+# SWAGGER - drf-spectacular
+# ------------------------------------------
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'MENTIS API',
+    'DESCRIPTION': 'API del sistema de reclutamiento MENTIS — Sprint 2',
+    'VERSION': '2.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SECURITY': [{'jwtAuth': []}],
 }
 
 # ------------------------------------------

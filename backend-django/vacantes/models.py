@@ -56,8 +56,7 @@ class Area(models.Model):
         help_text='Descripción del área y sus funciones dentro de la empresa'
     )
     icono = models.CharField(
-        max_length=30,
-        choices=ICONO_CHOICES,
+        max_length=50,
         default='star',
         verbose_name='Ícono'
     )

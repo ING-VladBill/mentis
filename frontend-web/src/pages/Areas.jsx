@@ -505,7 +505,7 @@ export default function Areas() {
                         }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}
                       >
-                        <i className={`ti ${area.activa ? 'ti-toggle-left' : 'ti-toggle-right'}`} style={{ fontSize: 14 }} />
+                        <i className={`ti ${area.activa ? 'ti-toggle-right' : 'ti-toggle-left'}`} style={{ fontSize: 14 }} />
                       </button>
 
                       {/* Eliminar — solo si no es predefinida */}
