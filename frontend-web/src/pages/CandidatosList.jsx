@@ -256,7 +256,12 @@ export default function CandidatosList() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Avatar nombre={nombreParts[0]} apellido={nombreParts[1]} />
                         <div>
-                          <div style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>{c.nombre_completo}</div>
+                          <div
+                            onClick={() => navigate(`/candidatos/${c.id}`)}
+                            style={{ fontSize: 13.5, fontWeight: 600, color: t.text, cursor: 'pointer' }}
+                            onMouseEnter={e => e.currentTarget.style.color = '#7c3aed'}
+                            onMouseLeave={e => e.currentTarget.style.color = t.text}
+                          >{c.nombre_completo}</div>
                           <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 2 }}>{c.email}</div>
                         </div>
                       </div>
@@ -326,6 +331,15 @@ export default function CandidatosList() {
                             {estaAnalizando ? 'Analizando...' : 'Analizar IA'}
                           </button>
                         )}
+                        <button
+                          onClick={() => navigate(`/candidatos/${c.id}`)}
+                          title="Ver detalle"
+                          style={{ width: 28, height: 28, borderRadius: 7, background: t.toggleBg, border: `1px solid ${t.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted, cursor: 'pointer', transition: 'all 0.15s', fontSize: 14 }}
+                          onMouseEnter={e => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.3)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}
+                        >
+                          <i className="ti ti-eye" />
+                        </button>
                         <a href={`mailto:${c.email}`} title="Enviar email" style={{ width: 28, height: 28, borderRadius: 7, background: t.toggleBg, border: `1px solid ${t.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted, textDecoration: 'none', transition: 'all 0.15s', fontSize: 14 }}
                           onMouseEnter={e => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.3)'; }}
                           onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}>

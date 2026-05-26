@@ -16,7 +16,7 @@ from autenticacion.views import (
     LoginRRHHView, RefreshTokenView, logout_view,
     validar_token_acceso, registro_candidato_con_token,
     login_candidato, perfil_usuario,
-    crear_usuario_rrhh, listar_usuarios_rrhh,
+    crear_usuario_rrhh, listar_usuarios_rrhh, editar_usuario_rrhh,
 )
 
 router = DefaultRouter()
@@ -37,6 +37,7 @@ urlpatterns = [
     path('api/auth/perfil/',              perfil_usuario,                   name='auth-perfil'),
     path('api/auth/usuarios/',            listar_usuarios_rrhh,             name='auth-usuarios-list'),
     path('api/auth/usuarios/crear/',      crear_usuario_rrhh,               name='auth-usuarios-crear'),
+    path('api/auth/usuarios/<int:pk>/',   editar_usuario_rrhh,              name='auth-usuarios-editar'),
 
     # API REST
     path('api/', include(router.urls)),
