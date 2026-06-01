@@ -419,6 +419,9 @@ def formulario_publico_postular(request, codigo):
     Crea el candidato automáticamente y lanza el análisis IA.
     """
     import threading
+    
+    from candidatos.servicios.correos import enviar_correo_confirmacion_postulacion
+    
     try:
         vacante = Vacante.objects.get(codigo=codigo, estado='abierta')
     except Vacante.DoesNotExist:
@@ -470,7 +473,14 @@ def formulario_publico_postular(request, codigo):
         source               = 'formulario',
         estado               = 'postulado',
     )
-
+    
+    # Correo de confirmación inmediato
+    threading.Thread(
+        target=enviar_correo_confirmacion_postulacion,
+        args=(candidato,),
+        daemon=True
+    ).start()    
+    
     # Lanzar análisis IA en background
     def _analizar():
         try:
