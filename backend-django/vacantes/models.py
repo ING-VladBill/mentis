@@ -1,6 +1,5 @@
 # ==========================================
-# vacantes/models.py - COMPLETO Y ACTUALIZADO
-# Area + Vacante con código dinámico
+# vacantes/models.py (Sprint 2 - completo)
 # ==========================================
 
 from django.db import models
@@ -13,7 +12,6 @@ class Area(models.Model):
     Áreas/Departamentos de la empresa.
     Configurable por el administrador desde el panel.
     """
-
     ICONO_CHOICES = [
         ('monitor',     '💻 Tecnología'),
         ('trending-up', '📈 Ventas'),
@@ -33,76 +31,24 @@ class Area(models.Model):
         ('star',        '⭐ Otro'),
     ]
 
-    nombre = models.CharField(
-        max_length=100,
-        unique=True,
-        verbose_name='Nombre del área'
-    )
+    nombre       = models.CharField(max_length=100, unique=True)
     codigo_corto = models.CharField(
-        max_length=10,
-        unique=True,
-        verbose_name='Código corto',
-        help_text='Máximo 10 caracteres, solo letras mayúsculas y números. Ej: TI, VEN, MKT',
-        validators=[
-            RegexValidator(
-                regex=r'^[A-Z0-9]+$',
-                message='Solo letras mayúsculas y números. Sin espacios ni caracteres especiales.'
-            )
-        ]
+        max_length=10, unique=True,
+        validators=[RegexValidator(r'^[A-Z0-9]+$', 'Solo letras mayúsculas y números.')],
+        help_text='Ej: TI, VEN, MKT'
     )
-    descripcion = models.TextField(
-        blank=True,
-        verbose_name='Descripción',
-        help_text='Descripción del área y sus funciones dentro de la empresa'
+    descripcion    = models.TextField(blank=True)
+    icono          = models.CharField(max_length=30, choices=ICONO_CHOICES, default='star')
+    color          = models.CharField(
+        max_length=7, default='#2E75B6',
+        validators=[RegexValidator(r'^#[0-9A-Fa-f]{6}$', 'Formato hex inválido. Ej: #2E75B6')]
     )
-    icono = models.CharField(
-        max_length=50,
-        default='star',
-        verbose_name='Ícono'
-    )
-    color = models.CharField(
-        max_length=7,
-        default='#2E75B6',
-        verbose_name='Color (hex)',
-        help_text='Formato hexadecimal. Ej: #2E75B6',
-        validators=[
-            RegexValidator(
-                regex=r'^#[0-9A-Fa-f]{6}$',
-                message='Formato inválido. Use formato hexadecimal. Ej: #2E75B6'
-            )
-        ]
-    )
-    instruccion_ia = models.TextField(
-        blank=True,
-        verbose_name='Instrucción para IA',
-        help_text=(
-            'Instrucción que la IA usará al generar exámenes y entrevistas para esta área. '
-            'Si se deja vacío, el sistema usará una instrucción genérica.'
-        )
-    )
-    activa = models.BooleanField(
-        default=True,
-        verbose_name='Activa',
-        help_text='Las áreas inactivas no aparecen al crear nuevas vacantes'
-    )
-    es_predefinida = models.BooleanField(
-        default=False,
-        verbose_name='Predefinida por el sistema',
-        help_text='Las áreas predefinidas del sistema no pueden eliminarse'
-    )
-    orden = models.IntegerField(
-        default=0,
-        verbose_name='Orden',
-        help_text='Menor número = aparece primero en los listados'
-    )
+    instruccion_ia = models.TextField(blank=True, help_text='Instrucción para la IA al analizar CVs y generar preguntas')
+    activa         = models.BooleanField(default=True)
+    es_predefinida = models.BooleanField(default=False)
+    orden          = models.IntegerField(default=0)
 
-    # Auditoría
-    creada_por         = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='areas_creadas'
-    )
+    creada_por         = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='areas_creadas')
     fecha_creacion     = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
 
@@ -139,52 +85,20 @@ class Area(models.Model):
     def get_instruccion_ia(self) -> str:
         if self.instruccion_ia:
             return self.instruccion_ia
-
         instrucciones_default = {
-            'TI': (
-                'Evalúa conocimientos técnicos: lenguajes de programación, frameworks, '
-                'arquitectura de software, bases de datos, herramientas DevOps y metodologías ágiles. '
-                'Para roles senior, valora liderazgo técnico y decisiones de arquitectura.'
-            ),
-            'VEN': (
-                'Evalúa experiencia en ventas B2B/B2C, manejo de CRM, técnicas de cierre, '
-                'manejo de objeciones y métricas. Valora logros con números concretos: '
-                'porcentaje de cuota alcanzada, tamaño de cartera.'
-            ),
-            'MKT': (
-                'Evalúa marketing digital, SEO/SEM, redes sociales, analítica web, '
-                'gestión de campañas y métricas (ROAS, CTR, CAC). '
-                'Valora portfolio de campañas y casos de éxito medibles.'
-            ),
-            'RRHH': (
-                'Evalúa legislación laboral, procesos de reclutamiento, gestión del desempeño, '
-                'desarrollo organizacional y herramientas HRIS.'
-            ),
-            'FIN': (
-                'Evalúa conocimientos contables, NIIF/IFRS, análisis financiero, '
-                'modelado financiero y herramientas como Excel avanzado, SAP o ERP.'
-            ),
-            'LEG': (
-                'Evalúa formación jurídica, especialidad legal, legislación aplicable, '
-                'experiencia en contratos, litigios o compliance.'
-            ),
-            'OPS': (
-                'Evalúa gestión de procesos, KPIs operativos, metodologías Lean/Six Sigma '
-                'y experiencia en mejora continua.'
-            ),
-            'ATC': (
-                'Evalúa manejo de clientes, resolución de conflictos, métricas CSAT/NPS '
-                'y herramientas de soporte.'
-            ),
-            'DIS': (
-                'Evalúa dominio de herramientas de diseño (Figma, Adobe Suite), '
-                'principios de diseño UX/UI y experiencia con sistemas de diseño.'
-            ),
+            'TI':   'Evalúa conocimientos técnicos: lenguajes, frameworks, arquitectura, bases de datos, DevOps y metodologías ágiles.',
+            'VEN':  'Evalúa experiencia en ventas B2B/B2C, CRM, técnicas de cierre, manejo de objeciones y métricas de ventas.',
+            'MKT':  'Evalúa marketing digital, SEO/SEM, redes sociales, analítica web y métricas (ROAS, CTR, CAC).',
+            'RRHH': 'Evalúa legislación laboral, reclutamiento, gestión del desempeño y herramientas HRIS.',
+            'FIN':  'Evalúa contabilidad, NIIF/IFRS, análisis financiero, modelado y herramientas como SAP o ERP.',
+            'LEG':  'Evalúa formación jurídica, legislación aplicable, contratos, litigios y compliance.',
+            'OPS':  'Evalúa gestión de procesos, KPIs, metodologías Lean/Six Sigma y mejora continua.',
+            'ATC':  'Evalúa manejo de clientes, resolución de conflictos, métricas CSAT/NPS y herramientas de soporte.',
+            'DIS':  'Evalúa dominio de Figma/Adobe Suite, principios UX/UI y sistemas de diseño.',
         }
         return instrucciones_default.get(
             self.codigo_corto,
-            'Evalúa los conocimientos específicos del área según los requisitos de la vacante. '
-            'Considera la experiencia práctica, formación académica y logros concretos.'
+            'Evalúa los conocimientos específicos del área según los requisitos de la vacante.'
         )
 
 
@@ -231,169 +145,116 @@ class Vacante(models.Model):
     ]
 
     INDUSTRIA_CHOICES = [
-        ('software',          'Software / SaaS'),
-        ('banca',             'Banca y Finanzas'),
-        ('retail',            'Retail / Comercio'),
-        ('salud',             'Salud / Farmacia'),
-        ('educacion',         'Educación'),
-        ('manufactura',       'Manufactura / Industrial'),
-        ('servicios',         'Servicios Profesionales'),
-        ('gobierno',          'Gobierno / Sector Público'),
-        ('telecomunicaciones','Telecomunicaciones'),
-        ('construccion',      'Construcción / Inmobiliaria'),
-        ('agricultura',       'Agricultura / Agroindustria'),
-        ('ong',               'ONG / Sin fines de lucro'),
-        ('otro',              'Otro'),
+        ('software',           'Software / SaaS'),
+        ('banca',              'Banca y Finanzas'),
+        ('retail',             'Retail / Comercio'),
+        ('salud',              'Salud / Farmacia'),
+        ('educacion',          'Educación'),
+        ('manufactura',        'Manufactura / Industrial'),
+        ('servicios',          'Servicios Profesionales'),
+        ('gobierno',           'Gobierno / Sector Público'),
+        ('telecomunicaciones', 'Telecomunicaciones'),
+        ('construccion',       'Construcción / Inmobiliaria'),
+        ('agricultura',        'Agricultura / Agroindustria'),
+        ('ong',                'ONG / Sin fines de lucro'),
+        ('otro',               'Otro'),
+    ]
+
+    MOTIVO_VACANTE_CHOICES = [
+        ('nuevo_puesto', 'Nuevo puesto'),
+        ('reemplazo',    'Reemplazo'),
+        ('expansion',    'Expansión del equipo'),
+        ('campana',      'Campaña / Temporal'),
+    ]
+
+    HORARIO_TIPO_CHOICES = [
+        ('tiempo_completo', 'Tiempo completo'),
+        ('medio_tiempo',    'Medio tiempo'),
+        ('turnos',          'Turnos rotativos'),
+        ('flexible',        'Horario flexible'),
+        ('por_objetivos',   'Por objetivos'),
     ]
 
     # ------------------------------------------
     # IDENTIFICACIÓN
     # ------------------------------------------
-    codigo      = models.CharField(
-        max_length=30,
-        unique=True,
-        editable=False,
-        verbose_name='Código',
-        help_text='Generado automáticamente. Ej: TI-2025-001'
-    )
-    titulo      = models.CharField(max_length=200, verbose_name='Título del puesto')
+    codigo       = models.CharField(max_length=30, unique=True, editable=False, help_text='Generado automáticamente. Ej: TI-2025-001')
+    titulo       = models.CharField(max_length=200)
+    area         = models.ForeignKey(Area, on_delete=models.PROTECT, related_name='vacantes')
+    departamento = models.CharField(max_length=100, blank=True, help_text='Sub-departamento. Ej: Backend dentro de TI')
+    industria    = models.CharField(max_length=30, choices=INDUSTRIA_CHOICES, default='otro')
 
-    # ForeignKey a Area (dinámico)
-    area        = models.ForeignKey(
-        Area,
-        on_delete=models.PROTECT,
-        related_name='vacantes',
-        verbose_name='Área / Departamento',
-        help_text='Área de la empresa a la que pertenece esta vacante'
-    )
-    departamento = models.CharField(
-        max_length=100, blank=True,
-        verbose_name='Sub-departamento',
-        help_text='Opcional. Ej: Backend, Frontend, Data dentro de TI'
-    )
-    industria   = models.CharField(
-        max_length=30,
-        choices=INDUSTRIA_CHOICES,
-        default='otro',
-        verbose_name='Industria'
-    )
+    # ------------------------------------------
+    # INFORMACIÓN DEL PUESTO (feedback RRHH)
+    # ------------------------------------------
+    motivo_vacante    = models.CharField(max_length=20, choices=MOTIVO_VACANTE_CHOICES, default='nuevo_puesto', help_text='¿Por qué se abre esta vacante?')
+    nombre_reemplazado = models.CharField(max_length=200, blank=True, help_text='Nombre de la persona que ocupaba el puesto (solo si es reemplazo)')
+    jefe_directo      = models.CharField(max_length=200, blank=True, help_text='Nombre y cargo del jefe directo del puesto')
+    solicitante       = models.CharField(max_length=200, blank=True, help_text='Nombre y cargo de quien autorizó abrir la vacante')
+    cantidad_posiciones = models.IntegerField(default=1, help_text='Número de personas a contratar para este perfil')
+    posiciones_cubiertas = models.IntegerField(default=0, help_text='Cuántas posiciones ya fueron cubiertas')
 
     # ------------------------------------------
     # DESCRIPCIÓN DEL PUESTO
     # ------------------------------------------
-    descripcion          = models.TextField(verbose_name='Descripción del puesto')
-    responsabilidades    = models.TextField(blank=True, verbose_name='Responsabilidades')
-    requisitos           = models.TextField(verbose_name='Requisitos obligatorios')
-    requisitos_deseables = models.TextField(blank=True, verbose_name='Requisitos deseables')
+    descripcion          = models.TextField()
+    responsabilidades    = models.TextField(blank=True)
+    requisitos           = models.TextField(help_text='Requisitos obligatorios del puesto')
+    requisitos_deseables = models.TextField(blank=True)
 
     # ------------------------------------------
     # HABILIDADES Y CONOCIMIENTOS
     # ------------------------------------------
-    habilidades              = models.TextField(
-        verbose_name='Habilidades requeridas',
-        help_text='Separadas por coma. Ej: Java, Spring Boot, MySQL'
-    )
-    tecnologias              = models.TextField(
-        blank=True,
-        verbose_name='Tecnologías / Herramientas',
-        help_text='Puede estar vacío para áreas no técnicas'
-    )
-    conocimientos_especificos = models.TextField(
-        blank=True,
-        verbose_name='Conocimientos específicos para examen IA',
-        help_text='Temas que la IA debe evaluar en el examen teórico'
-    )
+    habilidades               = models.TextField(help_text='Habilidades requeridas separadas por coma')
+    tecnologias               = models.TextField(blank=True, help_text='Tecnologías/herramientas')
+    conocimientos_especificos = models.TextField(blank=True, help_text='Temas para el examen IA')
 
     # ------------------------------------------
     # EXPERIENCIA Y NIVEL
     # ------------------------------------------
-    nivel_experiencia = models.CharField(
-        max_length=20, choices=NIVEL_CHOICES,
-        default='semi_senior', verbose_name='Nivel de experiencia'
-    )
-    anios_experiencia = models.IntegerField(
-        default=0, verbose_name='Años mínimos de experiencia'
-    )
-    nivel_educativo   = models.CharField(
-        max_length=100, blank=True,
-        verbose_name='Nivel educativo requerido',
-        help_text='Ej: Universitario completo, Técnico, Maestría'
-    )
-    carrera_afin      = models.CharField(
-        max_length=200, blank=True,
-        verbose_name='Carreras afines'
-    )
+    nivel_experiencia = models.CharField(max_length=20, choices=NIVEL_CHOICES, default='semi_senior')
+    anios_experiencia = models.IntegerField(default=0)
+    nivel_educativo   = models.CharField(max_length=100, blank=True)
+    carrera_afin      = models.CharField(max_length=200, blank=True)
 
     # ------------------------------------------
     # CONDICIONES LABORALES
     # ------------------------------------------
-    modalidad      = models.CharField(
-        max_length=20, choices=MODALIDAD_CHOICES,
-        default='presencial', verbose_name='Modalidad'
-    )
-    tipo_contrato  = models.CharField(
-        max_length=20, choices=TIPO_CONTRATO_CHOICES,
-        default='indefinido', verbose_name='Tipo de contrato'
-    )
-    ubicacion      = models.CharField(max_length=200, blank=True, verbose_name='Dirección/Ubicación')
-    ciudad         = models.CharField(max_length=100, default='Lima', verbose_name='Ciudad')
-    pais           = models.CharField(max_length=100, default='Perú', verbose_name='País')
-    salario_minimo = models.DecimalField(
-        max_digits=10, decimal_places=2,
-        null=True, blank=True, verbose_name='Salario mínimo'
-    )
-    salario_maximo = models.DecimalField(
-        max_digits=10, decimal_places=2,
-        null=True, blank=True, verbose_name='Salario máximo'
-    )
-    moneda         = models.CharField(max_length=10, default='PEN', verbose_name='Moneda')
-    mostrar_salario = models.BooleanField(
-        default=False,
-        verbose_name='Mostrar salario al candidato'
-    )
-    beneficios     = models.TextField(blank=True, verbose_name='Beneficios')
+    modalidad       = models.CharField(max_length=20, choices=MODALIDAD_CHOICES, default='presencial')
+    tipo_contrato   = models.CharField(max_length=20, choices=TIPO_CONTRATO_CHOICES, default='indefinido')
+    horario         = models.CharField(max_length=200, blank=True, help_text='Ej: Lunes a viernes 8am-6pm, Turnos rotativos, etc.')
+    horario_tipo    = models.CharField(max_length=20, choices=HORARIO_TIPO_CHOICES, default='tiempo_completo')
+    ubicacion       = models.CharField(max_length=200, blank=True)
+    ciudad          = models.CharField(max_length=100, default='Lima')
+    pais            = models.CharField(max_length=100, default='Perú')
+    salario_minimo  = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    salario_maximo  = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    moneda          = models.CharField(max_length=10, default='PEN')
+    mostrar_salario = models.BooleanField(default=False)
+    beneficios      = models.TextField(blank=True)
 
     # ------------------------------------------
-    # ESTADO Y PRIORIDAD
+    # ESTADO, PRIORIDAD Y CONFIDENCIALIDAD
     # ------------------------------------------
-    estado    = models.CharField(
-        max_length=20, choices=ESTADO_CHOICES,
-        default='borrador', verbose_name='Estado'
+    estado        = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='borrador')
+    prioridad     = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='media')
+    confidencial  = models.BooleanField(
+        default=False,
+        help_text='Si está activo: no se publica en canales externos. Solo carga manual y banco de talento.'
     )
-    prioridad = models.CharField(
-        max_length=10, choices=PRIORIDAD_CHOICES,
-        default='media', verbose_name='Prioridad'
-    )
+    fecha_limite  = models.DateField(null=True, blank=True, help_text='Fecha objetivo para cubrir la vacante')
 
     # ------------------------------------------
     # CONFIGURACIÓN DEL PROCESO IA
     # ------------------------------------------
-    score_cv_minimo          = models.IntegerField(
-        default=60,
-        verbose_name='Score mínimo de CV',
-        help_text='Score mínimo (0-100) para que el candidato avance al examen'
-    )
-    nota_minima_examen       = models.DecimalField(
-        max_digits=4, decimal_places=2, default=13.00,
-        verbose_name='Nota mínima del examen',
-        help_text='Nota mínima (0-20) para aprobar el examen teórico'
-    )
-    top_candidatos_finalistas = models.IntegerField(
-        default=5,
-        verbose_name='Top candidatos finalistas',
-        help_text='Cantidad de candidatos que pasan a entrevista presencial con RRHH'
-    )
+    score_cv_minimo           = models.IntegerField(default=60, help_text='Score mínimo del CV para avanzar al examen (0-100)')
+    nota_minima_examen        = models.DecimalField(max_digits=4, decimal_places=2, default=13.00)
+    top_candidatos_finalistas = models.IntegerField(default=5)
 
     # ------------------------------------------
     # AUDITORÍA
     # ------------------------------------------
-    creado_por         = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='vacantes_creadas',
-        verbose_name='Creado por'
-    )
+    creado_por         = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='vacantes_creadas')
     fecha_creacion     = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
     fecha_publicacion  = models.DateTimeField(null=True, blank=True)
@@ -414,22 +275,11 @@ class Vacante(models.Model):
         super().save(*args, **kwargs)
 
     def _generar_codigo(self) -> str:
-        """
-        Genera código automático con formato: {AREA}-{AÑO}-{NNN}
-        Ejemplos: TI-2025-001, VEN-2025-003, MKT-2025-001
-        """
         from django.utils import timezone
-        año          = timezone.now().year
-        codigo_area  = self.area.codigo_corto if self.area_id else 'GEN'
-        prefijo      = f'{codigo_area}-{año}-'
-
-        ultimo = (
-            Vacante.objects
-            .filter(codigo__startswith=prefijo)
-            .order_by('-codigo')
-            .first()
-        )
-
+        año         = timezone.now().year
+        cod_area    = self.area.codigo_corto if self.area_id else 'GEN'
+        prefijo     = f'{cod_area}-{año}-'
+        ultimo = Vacante.objects.filter(codigo__startswith=prefijo).order_by('-codigo').first()
         if ultimo:
             try:
                 num = int(ultimo.codigo.split('-')[-1]) + 1
@@ -437,7 +287,6 @@ class Vacante(models.Model):
                 num = 1
         else:
             num = 1
-
         return f'{prefijo}{num:03d}'
 
     @property
@@ -449,3 +298,187 @@ class Vacante(models.Model):
         return self.candidatos.exclude(
             estado__in=['cv_rechazado', 'examen_rechazado', 'descartado']
         ).count()
+
+    @property
+    def posiciones_disponibles(self):
+        return max(0, self.cantidad_posiciones - self.posiciones_cubiertas)
+
+    @property
+    def esta_completa(self):
+        return self.posiciones_cubiertas >= self.cantidad_posiciones
+
+    def get_email_postulaciones(self):
+        """Email único para recibir CVs de esta vacante por correo."""
+        from django.conf import settings
+        dominio = settings.MENTIS.get('EMAIL_POSTULACIONES_DOMINIO', 'mentis.com')
+        return f'postulaciones-{self.codigo.lower()}@{dominio}'
+
+    def get_url_formulario_publico(self):
+        """URL del formulario público de postulación."""
+        from django.conf import settings
+        base = settings.MENTIS['FRONTEND_URL']
+        return f'{base}/postular/{self.codigo}'
+
+    def canales_activos(self) -> dict:
+        """
+        Determina qué canales están disponibles según confidencialidad.
+        Confidencial = solo carga manual, sin publicación externa.
+        """
+        if self.confidencial:
+            return {
+                'carga_manual': True,
+                'formulario_publico': False,
+                'buzon_imap': False,
+                'indeed': False,
+                'google_jobs': False,
+                'textos_publicacion': 'confidencial',
+            }
+        return {
+            'carga_manual': True,
+            'formulario_publico': True,
+            'buzon_imap': True,
+            'indeed': True,
+            'google_jobs': True,
+            'textos_publicacion': 'completo',
+        }
+
+    def generar_textos_publicacion(self) -> dict:
+        """
+        Genera textos optimizados para publicar en distintos portales.
+        Solo disponible si la vacante no es confidencial.
+        """
+        if self.confidencial:
+            return {'error': 'Vacante confidencial. No se generan textos de publicación.'}
+
+        email     = self.get_email_postulaciones()
+        link      = self.get_url_formulario_publico()
+        salario   = ''
+        if self.mostrar_salario and self.salario_minimo and self.salario_maximo:
+            salario = f'\n💰 Salario: {self.moneda} {self.salario_minimo:,.0f} - {self.salario_maximo:,.0f}'
+
+        linkedin = f"""🚀 ¡Estamos buscando {self.titulo}!
+
+📍 {self.get_modalidad_display()} | {self.ciudad}
+🏢 {self.area.nombre} | {self.get_nivel_experiencia_display()}
+📄 {self.get_tipo_contrato_display()}{salario}
+
+✅ Requisitos clave:
+{self.requisitos[:300]}...
+
+📩 Postula enviando tu CV a: {email}
+🔗 O directamente en: {link}
+
+#{self.area.nombre.replace(' ', '').replace('/', '')} #{self.get_nivel_experiencia_display().replace(' ', '').replace('(', '').replace(')', '').replace('+', '')} #Empleo #Lima #Peru"""
+
+        computrabajo = f"""PUESTO: {self.titulo}
+ÁREA: {self.area.nombre}
+NIVEL: {self.get_nivel_experiencia_display()}
+MODALIDAD: {self.get_modalidad_display()}
+CIUDAD: {self.ciudad}
+CONTRATO: {self.get_tipo_contrato_display()}{salario}
+
+DESCRIPCIÓN DEL PUESTO:
+{self.descripcion[:500]}
+
+REQUISITOS OBLIGATORIOS:
+{self.requisitos}
+
+HABILIDADES REQUERIDAS:
+{self.habilidades}
+
+BENEFICIOS:
+{self.beneficios or 'A convenir'}
+
+CÓMO POSTULAR:
+• Envía tu CV a: {email}
+• O postula en línea: {link}
+• Código de vacante: {self.codigo}"""
+
+        whatsapp = f"""*{self.titulo}* — {self.area.nombre}
+📍 {self.ciudad} | {self.get_modalidad_display()}
+📋 {self.get_tipo_contrato_display()}{salario}
+
+Requisitos: {self.requisitos[:200]}...
+
+Postula aquí 👇
+{link}
+
+O envía tu CV a:
+{email}"""
+
+        indeed = f"""{self.titulo}
+
+{self.descripcion[:600]}
+
+Requisitos:
+{self.requisitos}
+
+Modalidad: {self.get_modalidad_display()}
+Ubicación: {self.ciudad}, {self.pais}
+Tipo: {self.get_tipo_contrato_display()}
+
+Postula en: {link}"""
+
+        return {
+            'linkedin':     linkedin,
+            'computrabajo': computrabajo,
+            'whatsapp':     whatsapp,
+            'indeed':       indeed,
+            'email_postulaciones': email,
+            'link_formulario':    link,
+        }
+
+    def schema_org(self) -> dict:
+        """
+        Genera el markup schema.org/JobPosting para Google for Jobs.
+        """
+        from django.utils import timezone
+        data = {
+            '@context':    'https://schema.org/',
+            '@type':       'JobPosting',
+            'title':       self.titulo,
+            'description': self.descripcion,
+            'datePosted':  (self.fecha_publicacion or timezone.now()).strftime('%Y-%m-%d'),
+            'jobLocation': {
+                '@type':   'Place',
+                'address': {
+                    '@type':           'PostalAddress',
+                    'addressLocality': self.ciudad,
+                    'addressCountry':  'PE',
+                },
+            },
+            'employmentType':    self._employment_type(),
+            'hiringOrganization': {
+                '@type': 'Organization',
+                'name':  'MENTIS',
+            },
+            'applicantLocationRequirements': {
+                '@type': 'Country',
+                'name':  self.pais,
+            },
+        }
+        if self.mostrar_salario and self.salario_minimo and self.salario_maximo:
+            data['baseSalary'] = {
+                '@type':    'MonetaryAmount',
+                'currency': self.moneda,
+                'value': {
+                    '@type':    'QuantitativeValue',
+                    'minValue': float(self.salario_minimo),
+                    'maxValue': float(self.salario_maximo),
+                    'unitText': 'MONTH',
+                },
+            }
+        if self.fecha_limite:
+            data['validThrough'] = self.fecha_limite.strftime('%Y-%m-%dT00:00:00')
+        return data
+
+    def _employment_type(self) -> str:
+        mapping = {
+            'indefinido':  'FULL_TIME',
+            'plazo_fijo':  'FULL_TIME',
+            'por_obra':    'CONTRACTOR',
+            'practicas':   'INTERN',
+            'freelance':   'CONTRACTOR',
+            'part_time':   'PART_TIME',
+        }
+        return mapping.get(self.tipo_contrato, 'FULL_TIME')
