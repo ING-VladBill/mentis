@@ -3,14 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../App';
 import api from '../services/api';
 
-// ─── Fuera del componente para evitar bug de foco ─────────────────────────────
+// ─── Fuera del componente ─────────────────────────────────────────────────────
 function Field({ label, required, hint, textMuted, children }) {
   return (
     <div>
-      <label style={{
-        display: 'block', fontSize: 12.5, fontWeight: 500,
-        color: textMuted, marginBottom: 6,
-      }}>
+      <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: textMuted, marginBottom: 6 }}>
         {label}{required && <span style={{ color: '#7c3aed' }}> *</span>}
       </label>
       {children}
@@ -19,37 +16,27 @@ function Field({ label, required, hint, textMuted, children }) {
   );
 }
 
-// ─── Estado inicial ───────────────────────────────────────────────────────────
 const INITIAL = {
-  titulo:               '',
-  area:                 '',        // ahora es ID numérico (FK)
-  departamento:         '',
-  industria:            'otro',
-  descripcion:          '',
-  responsabilidades:    '',
-  requisitos:           '',
-  requisitos_deseables: '',
-  habilidades:          '',
-  tecnologias:          '',
-  conocimientos_especificos: '',
-  nivel_experiencia:    'semi_senior',
-  anios_experiencia:    0,
-  nivel_educativo:      '',
-  carrera_afin:         '',
-  modalidad:            'presencial',
-  tipo_contrato:        'indefinido',
-  ciudad:               'Lima',
-  pais:                 'Perú',
-  salario_minimo:       '',
-  salario_maximo:       '',
-  moneda:               'PEN',
-  mostrar_salario:      false,
-  beneficios:           '',
-  estado:               'abierta',
-  prioridad:            'media',
-  score_cv_minimo:      60,
-  nota_minima_examen:   13,
-  top_candidatos_finalistas: 5,
+  titulo: '', area: '', departamento: '', industria: 'otro',
+  // Organizacional (NUEVO)
+  motivo_vacante: 'nuevo_puesto', nombre_reemplazado: '',
+  jefe_directo: '', solicitante: '', cantidad_posiciones: 1,
+  confidencial: false, fecha_limite: '',
+  // Descripción
+  descripcion: '', responsabilidades: '', requisitos: '',
+  requisitos_deseables: '', habilidades: '', tecnologias: '',
+  conocimientos_especificos: '', beneficios: '',
+  // Condiciones
+  nivel_experiencia: 'semi_senior', anios_experiencia: 0,
+  nivel_educativo: '', carrera_afin: '',
+  modalidad: 'presencial', tipo_contrato: 'indefinido',
+  horario: '', horario_tipo: 'tiempo_completo', ubicacion: '', // NUEVO
+  ciudad: 'Lima', pais: 'Perú',
+  salario_minimo: '', salario_maximo: '', moneda: 'PEN', mostrar_salario: false,
+  // Estado
+  estado: 'abierta', prioridad: 'media',
+  // IA
+  score_cv_minimo: 60, nota_minima_examen: 13, top_candidatos_finalistas: 5,
 };
 
 export default function VacanteForm() {
@@ -58,20 +45,20 @@ export default function VacanteForm() {
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
-  const [form, setForm]     = useState(INITIAL);
-  const [areas, setAreas]   = useState([]);      // ← áreas del backend
-  const [loading, setLoad]  = useState(false);
-  const [saving, setSave]   = useState(false);
-  const [error, setError]   = useState(null);
+  const [form, setForm]    = useState(INITIAL);
+  const [areas, setAreas]  = useState([]);
+  const [loading, setLoad] = useState(false);
+  const [saving, setSave]  = useState(false);
+  const [error, setError]  = useState(null);
 
-  // Estilos derivados del tema
   const inp = {
     width: '100%', boxSizing: 'border-box',
     background: t.inputBg, border: `1px solid ${t.inputBorder}`,
     borderRadius: 8, padding: '9px 12px',
     fontSize: 13.5, color: t.text,
     outline: 'none', transition: 'border-color 0.15s', fontFamily: 'inherit',
-};
+    colorScheme: 'dark',
+  };
   const section = {
     background: t.card, border: `1px solid ${t.cardBorder}`,
     borderRadius: 12, padding: '22px 24px', marginBottom: 16,
@@ -85,34 +72,25 @@ export default function VacanteForm() {
   const g2 = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 };
   const g3 = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 };
 
-  // Cargar áreas activas al montar
   useEffect(() => {
-    api.get('/api/areas/activas/')
-      .then(r => setAreas(r.data))
-      .catch(() => setAreas([]));
+    api.get('/api/areas/activas/').then(r => setAreas(r.data)).catch(() => setAreas([]));
   }, []);
 
-  // Si es edición, cargar vacante
-  useEffect(() => {
-    if (isEdit) loadVacante();
-  }, [id]);
+  useEffect(() => { if (isEdit) loadVacante(); }, [id]);
 
   async function loadVacante() {
     try {
       setLoad(true);
       const { data } = await api.get(`/api/vacantes/${id}/`);
       setForm({
-        ...INITIAL,
-        ...data,
-        area:           data.area?.id || data.area || '',
+        ...INITIAL, ...data,
+        area: data.area?.id || data.area || '',
         salario_minimo: data.salario_minimo ?? '',
         salario_maximo: data.salario_maximo ?? '',
+        fecha_limite: data.fecha_limite || '',
       });
-    } catch {
-      setError('No se pudo cargar la vacante.');
-    } finally {
-      setLoad(false);
-    }
+    } catch { setError('No se pudo cargar la vacante.'); }
+    finally { setLoad(false); }
   }
 
   function handleChange(e) {
@@ -121,35 +99,26 @@ export default function VacanteForm() {
   }
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    setError(null);
-    setSave(true);
-
+    e.preventDefault(); setError(null); setSave(true);
     const payload = {
       ...form,
-      salario_minimo:    form.salario_minimo === '' ? null : form.salario_minimo,
-      salario_maximo:    form.salario_maximo === '' ? null : form.salario_maximo,
+      salario_minimo: form.salario_minimo === '' ? null : form.salario_minimo,
+      salario_maximo: form.salario_maximo === '' ? null : form.salario_maximo,
+      fecha_limite:   form.fecha_limite === '' ? null : form.fecha_limite,
       anios_experiencia: Number(form.anios_experiencia),
-      score_cv_minimo:   Number(form.score_cv_minimo),
+      cantidad_posiciones: Number(form.cantidad_posiciones),
+      score_cv_minimo: Number(form.score_cv_minimo),
       nota_minima_examen: Number(form.nota_minima_examen),
       top_candidatos_finalistas: Number(form.top_candidatos_finalistas),
     };
-
     try {
       if (isEdit) await api.put(`/api/vacantes/${id}/`, payload);
       else        await api.post('/api/vacantes/', payload);
       navigate('/vacantes');
     } catch (err) {
       const d = err.response?.data;
-      setError(
-        d ? Object.entries(d).map(([k, v]) =>
-          `${k}: ${Array.isArray(v) ? v.join(', ') : v}`
-        ).join(' | ')
-        : 'Error al guardar. Verifica los campos.'
-      );
-    } finally {
-      setSave(false);
-    }
+      setError(d ? Object.entries(d).map(([k,v]) => `${k}: ${Array.isArray(v)?v.join(', '):v}`).join(' | ') : 'Error al guardar.');
+    } finally { setSave(false); }
   }
 
   if (loading) return (
@@ -161,6 +130,7 @@ export default function VacanteForm() {
 
   return (
     <div style={{ maxWidth: 780, margin: '0 auto', color: t.text }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 22, fontSize: 13, color: t.textMuted }}>
@@ -171,21 +141,14 @@ export default function VacanteForm() {
         <span style={{ color: t.text }}>{isEdit ? `Editar #${id}` : 'Nueva vacante'}</span>
       </div>
 
-      {/* Código generado automáticamente — solo visible en edición */}
       {isEdit && form.codigo && (
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)',
-          borderRadius: 8, padding: '6px 14px', marginBottom: 18,
-          fontSize: 13, color: '#a78bfa',
-        }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 8, padding: '6px 14px', marginBottom: 18, fontSize: 13, color: '#a78bfa' }}>
           <i className="ti ti-hash" style={{ fontSize: 14 }} />
           Código: <strong>{form.codigo}</strong>
           <span style={{ fontSize: 11, opacity: 0.6 }}>— generado automáticamente</span>
         </div>
       )}
 
-      {/* Error */}
       {error && (
         <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, color: '#f87171', fontSize: 13, display: 'flex', gap: 8 }}>
           <i className="ti ti-alert-circle" style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }} /> {error}
@@ -201,29 +164,20 @@ export default function VacanteForm() {
             <Field label="Título del puesto" required textMuted={t.textMuted}>
               <input name="titulo" value={form.titulo} onChange={handleChange} required style={inp} placeholder="Ej: Desarrollador Backend Senior" />
             </Field>
-
-            {/* Área como select cargado desde el backend */}
             <Field label="Área / Departamento" required textMuted={t.textMuted}>
               <select name="area" value={form.area} onChange={handleChange} required style={{ ...inp, cursor: 'pointer' }}>
                 <option value="">— Selecciona un área —</option>
-                {areas.map(a => (
-                  <option key={a.id} value={a.id}>
-                    [{a.codigo_corto}] {a.nombre}
-                  </option>
-                ))}
+                {areas.map(a => <option key={a.id} value={a.id}>[{a.codigo_corto}] {a.nombre}</option>)}
               </select>
               {areas.length === 0 && (
                 <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 5, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <i className="ti ti-alert-triangle" style={{ fontSize: 13 }} />
-                  No hay áreas activas. Pide al admin que cree una desde el panel Django.
+                  <i className="ti ti-alert-triangle" style={{ fontSize: 13 }} /> No hay áreas activas.
                 </div>
               )}
             </Field>
-
             <Field label="Sub-departamento" textMuted={t.textMuted} hint="Opcional. Ej: Backend, Frontend, Data">
               <input name="departamento" value={form.departamento} onChange={handleChange} style={inp} placeholder="Ej: Ingeniería de Software" />
             </Field>
-
             <Field label="Industria" textMuted={t.textMuted}>
               <select name="industria" value={form.industria} onChange={handleChange} style={{ ...inp, cursor: 'pointer' }}>
                 <option value="software">Software / SaaS</option>
@@ -241,6 +195,45 @@ export default function VacanteForm() {
                 <option value="otro">Otro</option>
               </select>
             </Field>
+          </div>
+        </div>
+
+        {/* ── Información organizacional (NUEVO) ── */}
+        <div style={section}>
+          <div style={sTitle}><i className="ti ti-building-community" style={{ fontSize: 14 }} /> Información organizacional</div>
+          <div style={g2}>
+            <Field label="Motivo de la vacante" textMuted={t.textMuted}>
+              <select name="motivo_vacante" value={form.motivo_vacante} onChange={handleChange} style={{ ...inp, cursor: 'pointer' }}>
+                <option value="nuevo_puesto">Nuevo puesto</option>
+                <option value="reemplazo">Reemplazo</option>
+                <option value="expansion">Expansión del equipo</option>
+                <option value="campana">Campaña temporal</option>
+              </select>
+            </Field>
+            {form.motivo_vacante === 'reemplazo' && (
+              <Field label="Nombre del colaborador a reemplazar" textMuted={t.textMuted}>
+                <input name="nombre_reemplazado" value={form.nombre_reemplazado} onChange={handleChange} style={inp} placeholder="Nombre del colaborador que se reemplaza" />
+              </Field>
+            )}
+            <Field label="Jefe directo" textMuted={t.textMuted}>
+              <input name="jefe_directo" value={form.jefe_directo} onChange={handleChange} style={inp} placeholder="Ej: María López — Gerente de TI" />
+            </Field>
+            <Field label="Solicitante" textMuted={t.textMuted}>
+              <input name="solicitante" value={form.solicitante} onChange={handleChange} style={inp} placeholder="Ej: Carlos Ruiz — Gerente General" />
+            </Field>
+            <Field label="N° de posiciones disponibles" textMuted={t.textMuted}>
+              <input name="cantidad_posiciones" value={form.cantidad_posiciones} onChange={handleChange} type="number" min={1} style={inp} />
+            </Field>
+            <Field label="Fecha límite de postulación" textMuted={t.textMuted}>
+              <input name="fecha_limite" value={form.fecha_limite} onChange={handleChange} type="date" style={inp} />
+            </Field>
+          </div>
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input type="checkbox" name="confidencial" id="confidencial" checked={form.confidencial} onChange={handleChange} style={{ width: 16, height: 16, accentColor: '#7c3aed', cursor: 'pointer' }} />
+            <label htmlFor="confidencial" style={{ fontSize: 13, color: t.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <i className="ti ti-eye-off" style={{ fontSize: 14 }} />
+              Vacante confidencial — no mostrar nombre de empresa al candidato
+            </label>
           </div>
         </div>
 
@@ -318,15 +311,28 @@ export default function VacanteForm() {
                 <option value="part_time">Part-time</option>
               </select>
             </Field>
+            <Field label="Tipo de horario" textMuted={t.textMuted}>
+              <select name="horario_tipo" value={form.horario_tipo} onChange={handleChange} style={{ ...inp, cursor: 'pointer' }}>
+                <option value="tiempo_completo">Tiempo completo</option>
+                <option value="medio_tiempo">Medio tiempo</option>
+                <option value="turnos">Por turnos</option>
+                <option value="flexible">Horario flexible</option>
+                <option value="por_objetivos">Por objetivos</option>
+              </select>
+            </Field>
+            <Field label="Horario" textMuted={t.textMuted}>
+              <input name="horario" value={form.horario} onChange={handleChange} style={inp} placeholder="Ej: Lunes a viernes 9am-6pm" />
+            </Field>
             <Field label="Ciudad" required textMuted={t.textMuted}>
               <input name="ciudad" value={form.ciudad} onChange={handleChange} required style={inp} placeholder="Lima" />
+            </Field>
+            <Field label="Ubicación exacta" textMuted={t.textMuted}>
+              <input name="ubicacion" value={form.ubicacion} onChange={handleChange} style={inp} placeholder="Ej: San Isidro, Torre Parque Mar Piso 12" />
             </Field>
             <Field label="País" textMuted={t.textMuted}>
               <input name="pais" value={form.pais} onChange={handleChange} style={inp} />
             </Field>
           </div>
-
-          {/* Salario */}
           <div style={{ ...g3, marginTop: 14 }}>
             <Field label="Salario mínimo" textMuted={t.textMuted}>
               <input name="salario_minimo" value={form.salario_minimo} onChange={handleChange} type="number" style={inp} placeholder="2000" />
@@ -341,17 +347,8 @@ export default function VacanteForm() {
               </select>
             </Field>
           </div>
-
-          {/* Mostrar salario */}
           <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <input
-              type="checkbox"
-              name="mostrar_salario"
-              id="mostrar_salario"
-              checked={form.mostrar_salario}
-              onChange={handleChange}
-              style={{ width: 16, height: 16, accentColor: '#7c3aed', cursor: 'pointer' }}
-            />
+            <input type="checkbox" name="mostrar_salario" id="mostrar_salario" checked={form.mostrar_salario} onChange={handleChange} style={{ width: 16, height: 16, accentColor: '#7c3aed', cursor: 'pointer' }} />
             <label htmlFor="mostrar_salario" style={{ fontSize: 13, color: t.textMuted, cursor: 'pointer' }}>
               Mostrar rango salarial al candidato
             </label>
@@ -365,10 +362,10 @@ export default function VacanteForm() {
             <Field label="Score mínimo de CV" textMuted={t.textMuted} hint="0–100. Candidatos por debajo son rechazados automáticamente">
               <input name="score_cv_minimo" value={form.score_cv_minimo} onChange={handleChange} type="number" min={0} max={100} style={inp} />
             </Field>
-            <Field label="Nota mínima del examen" textMuted={t.textMuted} hint="0–20. Nota mínima para pasar al examen teórico">
+            <Field label="Nota mínima del examen" textMuted={t.textMuted} hint="0–20. Nota mínima para avanzar">
               <input name="nota_minima_examen" value={form.nota_minima_examen} onChange={handleChange} type="number" min={0} max={20} style={inp} />
             </Field>
-            <Field label="Top candidatos finalistas" textMuted={t.textMuted} hint="Cantidad que pasa a entrevista presencial con RRHH">
+            <Field label="Top candidatos finalistas" textMuted={t.textMuted} hint="Cantidad que pasa a entrevista presencial">
               <input name="top_candidatos_finalistas" value={form.top_candidatos_finalistas} onChange={handleChange} type="number" min={1} style={inp} />
             </Field>
           </div>
@@ -404,20 +401,12 @@ export default function VacanteForm() {
           <button type="button" onClick={() => navigate('/vacantes')} style={{ padding: '9px 20px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: 'transparent', color: t.textMuted, fontSize: 13.5, cursor: 'pointer' }}>
             Cancelar
           </button>
-          <button type="submit" disabled={saving} style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '9px 24px', borderRadius: 9, border: 'none',
-            background: saving ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
-            color: '#fff', fontSize: 13.5, fontWeight: 600,
-            cursor: saving ? 'wait' : 'pointer',
-            boxShadow: saving ? 'none' : '0 0 20px rgba(124,58,237,0.3)',
-          }}>
+          <button type="submit" disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 24px', borderRadius: 9, border: 'none', background: saving ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: saving ? 'wait' : 'pointer', boxShadow: saving ? 'none' : '0 0 20px rgba(124,58,237,0.3)' }}>
             {saving && <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />}
             {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear vacante'}
           </button>
         </div>
 
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </form>
     </div>
   );
