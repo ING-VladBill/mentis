@@ -1,390 +1,130 @@
-import { useState, useEffect, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { useEffect, useState } from 'react';
 import { useTheme } from '../App';
+import toast from 'react-hot-toast';
 import api from '../services/api';
+import ConfirmModal from '../components/ConfirmModal';
 
-// ─── Configuración de roles ───────────────────────────────────────────────────
-const ROL = {
-  admin:      { label: 'Admin',      color: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
-  reclutador: { label: 'Reclutador', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-  evaluador:  { label: 'Evaluador',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-  gerente:    { label: 'Gerente',    color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
-};
+// ─── Fuera del componente ─────────────────────────────────────────────────────
 
-// ─── Avatar con iniciales ─────────────────────────────────────────────────────
-function Avatar({ nombre, apellidos, size = 36 }) {
-  const partes = `${nombre || ''} ${apellidos || ''}`.trim().split(/\s+/);
-  const iniciales = partes.length >= 2
-    ? `${partes[0][0]}${partes[1][0]}`.toUpperCase()
-    : (partes[0]?.[0] || '?').toUpperCase();
-  const colors = ['#7c3aed', '#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
-  const color = colors[(nombre?.charCodeAt(0) || 0) % colors.length];
-
+function Avatar({ nombre, apellidos }) {
+  const n = (nombre?.[0] || '').toUpperCase();
+  const a = (apellidos?.[0] || '').toUpperCase();
+  const colors = ['#7c3aed','#4f46e5','#0891b2','#059669','#d97706','#dc2626','#db2777'];
+  const color = colors[((nombre?.charCodeAt(0) || 0) + (apellidos?.charCodeAt(0) || 0)) % colors.length];
   return (
     <div style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
+      width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
       background: `${color}22`, border: `1.5px solid ${color}44`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.33, fontWeight: 700, color, userSelect: 'none',
-    }}>
-      {iniciales}
-    </div>
+      fontSize: 13, fontWeight: 700, color,
+    }}>{n}{a}</div>
   );
 }
 
-// ─── Modal crear usuario ──────────────────────────────────────────────────────
-function UsuarioModal({ onClose, onCreado, t, dark }) {
-  const [form, setForm] = useState({
-    nombre: '', apellidos: '', email: '', password: '',
-    rol: 'reclutador', area_responsable: '', telefono: '',
-  });
-  const [areas,   setAreas]   = useState([]);
-  const [errors,  setErrors]  = useState({});
-  const [saving,  setSaving]  = useState(false);
+const ROL_CFG = {
+  admin:      { color: '#a78bfa', bg: 'rgba(124,58,237,0.12)', border: 'rgba(124,58,237,0.25)', label: 'Administrador' },
+  reclutador: { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.25)', label: 'Reclutador'   },
+  evaluador:  { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.25)', label: 'Evaluador'    },
+  gerente:    { color: '#34d399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.25)', label: 'Gerente'      },
+};
 
-  useEffect(() => {
-    api.get('/api/areas/activas/').then(r => setAreas(r.data || [])).catch(() => {});
-  }, []);
+function RolBadge({ rol }) {
+  const cfg = ROL_CFG[rol] || ROL_CFG.reclutador;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '3px 10px', borderRadius: 20,
+      fontSize: 12, fontWeight: 500,
+      background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
+    }}>{cfg.label}</span>
+  );
+}
 
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
-  }
+function ModalCrear({ t, onClose, onCreado }) {
+  const [form, setForm] = useState({ nombre: '', apellidos: '', email: '', password: '', rol: 'reclutador', area_responsable: '', telefono: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState(null);
+
+  const inp = {
+    width: '100%', boxSizing: 'border-box',
+    background: t.inputBg, border: `1px solid ${t.inputBorder}`,
+    borderRadius: 8, padding: '9px 12px',
+    fontSize: 13.5, color: t.text,
+    outline: 'none', fontFamily: 'inherit',
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setError(null);
     setSaving(true);
     try {
-      const payload = { ...form };
-      if (!payload.area_responsable) delete payload.area_responsable;
-      if (!payload.telefono)         delete payload.telefono;
-      await api.post('/api/auth/usuarios/crear/', payload);
-      toast.success('Usuario creado correctamente');
-      onCreado();
+      const { data } = await api.post('/api/auth/usuarios/crear/', form);
+      toast.success(`Usuario ${data.nombre} creado. Se le envió un correo con sus credenciales.`);
+      onCreado(data);
+      onClose();
     } catch (err) {
-      const data = err.response?.data;
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        setErrors(data);
-      } else {
-        toast.error('Error al crear el usuario');
-      }
+      const d = err.response?.data;
+      setError(d ? Object.entries(d).map(([k,v]) => `${k}: ${Array.isArray(v)?v.join(', '):v}`).join(' | ') : 'Error al crear.');
     } finally {
       setSaving(false);
     }
   }
 
-  const inp = {
-    width: '100%', padding: '9px 12px',
-    background: t.inputBg, border: `1px solid ${t.inputBorder}`,
-    borderRadius: 8, color: t.text, fontSize: 13.5,
-    outline: 'none', boxSizing: 'border-box',
-    colorScheme: dark ? 'dark' : 'light',
-  };
-  const lbl = { display: 'block', fontSize: 12, fontWeight: 500, color: t.textMuted, marginBottom: 5 };
-  const err = { fontSize: 11.5, color: '#f87171', marginTop: 4 };
-
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.55)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
-      <div style={{
-        background: t.card, border: `1px solid ${t.cardBorder}`,
-        borderRadius: 16, width: '100%', maxWidth: 520,
-        padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
-        maxHeight: '90vh', overflowY: 'auto',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 600, color: t.text, margin: 0 }}>Nuevo usuario</h2>
-          <button onClick={onClose} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: t.textMuted, padding: 4, borderRadius: 6,
-            display: 'flex', alignItems: 'center',
-          }}>
-            <i className="ti ti-x" style={{ fontSize: 18 }} />
-          </button>
-        </div>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: '28px 26px', maxWidth: 480, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+        <div style={{ fontSize: 17, fontWeight: 700, color: t.text, marginBottom: 20 }}>Nuevo usuario</div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            {/* Nombre */}
-            <div>
-              <label style={lbl}>Nombre *</label>
-              <input name="nombre" value={form.nombre} onChange={handleChange}
-                style={{ ...inp, borderColor: errors.nombre ? '#f87171' : t.inputBorder }}
-                placeholder="Juan" />
-              {errors.nombre && <div style={err}>{Array.isArray(errors.nombre) ? errors.nombre[0] : errors.nombre}</div>}
-            </div>
+        {error && (
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, color: '#f87171', fontSize: 12.5 }}>{error}</div>
+        )}
 
-            {/* Apellidos */}
-            <div>
-              <label style={lbl}>Apellidos *</label>
-              <input name="apellidos" value={form.apellidos} onChange={handleChange}
-                style={{ ...inp, borderColor: errors.apellidos ? '#f87171' : t.inputBorder }}
-                placeholder="Pérez García" />
-              {errors.apellidos && <div style={err}>{Array.isArray(errors.apellidos) ? errors.apellidos[0] : errors.apellidos}</div>}
-            </div>
-
-            {/* Email */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={lbl}>Email *</label>
-              <input name="email" type="email" value={form.email} onChange={handleChange}
-                style={{ ...inp, borderColor: errors.email ? '#f87171' : t.inputBorder }}
-                placeholder="juan.perez@empresa.com" />
-              {errors.email && <div style={err}>{Array.isArray(errors.email) ? errors.email[0] : errors.email}</div>}
-            </div>
-
-            {/* Password */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={lbl}>Contraseña *</label>
-              <input name="password" type="password" value={form.password} onChange={handleChange}
-                style={{ ...inp, borderColor: errors.password ? '#f87171' : t.inputBorder }}
-                placeholder="Mínimo 8 caracteres" />
-              {errors.password && <div style={err}>{Array.isArray(errors.password) ? errors.password[0] : errors.password}</div>}
-            </div>
-
-            {/* Rol */}
-            <div>
-              <label style={lbl}>Rol *</label>
-              <select name="rol" value={form.rol} onChange={handleChange}
-                style={{ ...inp, borderColor: errors.rol ? '#f87171' : t.inputBorder }}>
-                {Object.entries(ROL).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
-                ))}
-              </select>
-              {errors.rol && <div style={err}>{Array.isArray(errors.rol) ? errors.rol[0] : errors.rol}</div>}
-            </div>
-
-            {/* Área responsable */}
-            <div>
-              <label style={lbl}>Área responsable</label>
-              <select name="area_responsable" value={form.area_responsable} onChange={handleChange}
-                style={inp}>
-                <option value="">Sin área</option>
-                {areas.map(a => (
-                  <option key={a.id} value={a.id}>{a.nombre}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Teléfono */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={lbl}>Teléfono</label>
-              <input name="telefono" value={form.telefono} onChange={handleChange}
-                style={inp} placeholder="+51 999 999 999" />
-            </div>
-          </div>
-
-          {/* Vista previa del badge de rol */}
-          <div style={{
-            marginTop: 16, padding: '10px 14px', borderRadius: 9,
-            background: t.inputBg, border: `1px solid ${t.inputBorder}`,
-            display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <Avatar nombre={form.nombre} apellidos={form.apellidos} size={34} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: t.text }}>
-                {form.nombre || form.apellidos ? `${form.nombre} ${form.apellidos}`.trim() : 'Nombre del usuario'}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[['nombre','Nombre *','Juan'],['apellidos','Apellidos *','García López']].map(([name, label, ph]) => (
+              <div key={name}>
+                <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>{label}</label>
+                <input name={name} value={form[name]} onChange={e => setForm(p => ({...p, [e.target.name]: e.target.value}))} required style={inp} placeholder={ph} />
               </div>
-              <div style={{ fontSize: 11.5, color: t.textMuted }}>{form.email || 'email@empresa.com'}</div>
-            </div>
-            <span style={{
-              fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 5,
-              background: ROL[form.rol]?.bg, color: ROL[form.rol]?.color,
-            }}>{ROL[form.rol]?.label}</span>
+            ))}
           </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 }}>
-            <button type="button" onClick={onClose} style={{
-              padding: '9px 18px', borderRadius: 8,
-              background: t.toggleBg, border: `1px solid ${t.cardBorder}`,
-              color: t.textMuted, fontSize: 13.5, cursor: 'pointer',
-            }}>Cancelar</button>
-            <button type="submit" disabled={saving} style={{
-              padding: '9px 22px', borderRadius: 8,
-              background: saving ? 'rgba(124,58,237,0.5)' : '#7c3aed',
-              border: 'none', color: '#fff',
-              fontSize: 13.5, fontWeight: 500,
-              cursor: saving ? 'not-allowed' : 'pointer',
-            }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Email *</label>
+            <input name="email" type="email" value={form.email} onChange={e => setForm(p => ({...p, email: e.target.value}))} required style={inp} placeholder="juan@empresa.com" />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Contraseña temporal *</label>
+            <input name="password" type="password" value={form.password} onChange={e => setForm(p => ({...p, password: e.target.value}))} required style={inp} placeholder="Mínimo 8 caracteres" />
+            <div style={{ fontSize: 11, color: t.textFaint, marginTop: 4 }}>El sistema enviará un correo al usuario con sus credenciales.</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Rol *</label>
+              <select name="rol" value={form.rol} onChange={e => setForm(p => ({...p, rol: e.target.value}))} style={{ ...inp, cursor: 'pointer' }}>
+                <option value="reclutador">Reclutador</option>
+                <option value="evaluador">Evaluador</option>
+                <option value="gerente">Gerente</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Teléfono</label>
+              <input name="telefono" value={form.telefono} onChange={e => setForm(p => ({...p, telefono: e.target.value}))} style={inp} placeholder="+51 999 999 999" />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Área responsable</label>
+            <input name="area_responsable" value={form.area_responsable} onChange={e => setForm(p => ({...p, area_responsable: e.target.value}))} style={inp} placeholder="Tecnología, Marketing, etc." />
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 13.5, cursor: 'pointer' }}>Cancelar</button>
+            <button type="submit" disabled={saving} style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: saving ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: saving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+              {saving && <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />}
               {saving ? 'Creando...' : 'Crear usuario'}
             </button>
           </div>
         </form>
-      </div>
-    </div>
-  );
-}
-
-// ─── Modal editar usuario ─────────────────────────────────────────────────────
-function EditUsuarioModal({ usuario, onClose, onGuardado, t, dark }) {
-  const [form, setForm] = useState({
-    nombre:           usuario.nombre           || '',
-    apellidos:        usuario.apellidos        || '',
-    email:            usuario.email            || '',
-    rol:              usuario.rol              || 'reclutador',
-    area_responsable: usuario.area_responsable?.id ?? usuario.area_responsable ?? '',
-    telefono:         usuario.telefono         || '',
-  });
-  const [areas,  setAreas]  = useState([]);
-  const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    api.get('/api/areas/activas/').then(r => setAreas(r.data || [])).catch(() => {});
-  }, []);
-
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const payload = { ...form };
-      if (!payload.area_responsable) delete payload.area_responsable;
-      if (!payload.telefono)         delete payload.telefono;
-      await api.put(`/api/auth/usuarios/${usuario.id}/`, payload);
-      toast.success('Usuario actualizado correctamente');
-      onGuardado();
-    } catch (err) {
-      const data = err.response?.data;
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        setErrors(data);
-      } else {
-        toast.error('Error al actualizar el usuario');
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const inp = {
-    width: '100%', padding: '9px 12px',
-    background: t.inputBg, border: `1px solid ${t.inputBorder}`,
-    borderRadius: 8, color: t.text, fontSize: 13.5,
-    outline: 'none', boxSizing: 'border-box',
-    colorScheme: dark ? 'dark' : 'light',
-  };
-  const lbl = { display: 'block', fontSize: 12, fontWeight: 500, color: t.textMuted, marginBottom: 5 };
-  const err = { fontSize: 11.5, color: '#f87171', marginTop: 4 };
-
-  return (
-    <div
-      style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.55)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
-      <div style={{
-        background: t.card, border: `1px solid ${t.cardBorder}`,
-        borderRadius: 16, width: '100%', maxWidth: 520,
-        padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
-        maxHeight: '90vh', overflowY: 'auto',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 600, color: t.text, margin: 0 }}>Editar usuario</h2>
-          <button onClick={onClose} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: t.textMuted, padding: 4, borderRadius: 6,
-            display: 'flex', alignItems: 'center',
-          }}>
-            <i className="ti ti-x" style={{ fontSize: 18 }} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div>
-              <label style={lbl}>Nombre *</label>
-              <input name="nombre" value={form.nombre} onChange={handleChange}
-                style={{ ...inp, borderColor: errors.nombre ? '#f87171' : t.inputBorder }}
-                placeholder="Juan" />
-              {errors.nombre && <div style={err}>{Array.isArray(errors.nombre) ? errors.nombre[0] : errors.nombre}</div>}
-            </div>
-
-            <div>
-              <label style={lbl}>Apellidos *</label>
-              <input name="apellidos" value={form.apellidos} onChange={handleChange}
-                style={{ ...inp, borderColor: errors.apellidos ? '#f87171' : t.inputBorder }}
-                placeholder="Pérez García" />
-              {errors.apellidos && <div style={err}>{Array.isArray(errors.apellidos) ? errors.apellidos[0] : errors.apellidos}</div>}
-            </div>
-
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={lbl}>Email *</label>
-              <input name="email" type="email" value={form.email} onChange={handleChange}
-                style={{ ...inp, borderColor: errors.email ? '#f87171' : t.inputBorder }}
-                placeholder="juan.perez@empresa.com" />
-              {errors.email && <div style={err}>{Array.isArray(errors.email) ? errors.email[0] : errors.email}</div>}
-            </div>
-
-            <div>
-              <label style={lbl}>Rol *</label>
-              <select name="rol" value={form.rol} onChange={handleChange}
-                style={{ ...inp, borderColor: errors.rol ? '#f87171' : t.inputBorder }}>
-                {Object.entries(ROL).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
-                ))}
-              </select>
-              {errors.rol && <div style={err}>{Array.isArray(errors.rol) ? errors.rol[0] : errors.rol}</div>}
-            </div>
-
-            <div>
-              <label style={lbl}>Área responsable</label>
-              <select name="area_responsable" value={form.area_responsable} onChange={handleChange} style={inp}>
-                <option value="">Sin área</option>
-                {areas.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-              </select>
-            </div>
-
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={lbl}>Teléfono</label>
-              <input name="telefono" value={form.telefono} onChange={handleChange}
-                style={inp} placeholder="+51 999 999 999" />
-            </div>
-          </div>
-
-          {/* Vista previa */}
-          <div style={{
-            marginTop: 16, padding: '10px 14px', borderRadius: 9,
-            background: t.inputBg, border: `1px solid ${t.inputBorder}`,
-            display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <Avatar nombre={form.nombre} apellidos={form.apellidos} size={34} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: t.text }}>
-                {`${form.nombre} ${form.apellidos}`.trim() || 'Nombre del usuario'}
-              </div>
-              <div style={{ fontSize: 11.5, color: t.textMuted }}>{form.email || 'email@empresa.com'}</div>
-            </div>
-            <span style={{
-              fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 5,
-              background: ROL[form.rol]?.bg, color: ROL[form.rol]?.color,
-            }}>{ROL[form.rol]?.label}</span>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 }}>
-            <button type="button" onClick={onClose} style={{
-              padding: '9px 18px', borderRadius: 8,
-              background: t.toggleBg, border: `1px solid ${t.cardBorder}`,
-              color: t.textMuted, fontSize: 13.5, cursor: 'pointer',
-            }}>Cancelar</button>
-            <button type="submit" disabled={saving} style={{
-              padding: '9px 22px', borderRadius: 8,
-              background: saving ? 'rgba(124,58,237,0.5)' : '#7c3aed',
-              border: 'none', color: '#fff',
-              fontSize: 13.5, fontWeight: 500,
-              cursor: saving ? 'not-allowed' : 'pointer',
-            }}>
-              {saving ? 'Guardando...' : 'Guardar cambios'}
-            </button>
-          </div>
-        </form>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
   );
@@ -392,228 +132,210 @@ function EditUsuarioModal({ usuario, onClose, onGuardado, t, dark }) {
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function Usuarios() {
-  const { t, dark } = useTheme();
-  const [usuarios,     setUsuarios]     = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [modalOpen,    setModalOpen]    = useState(false);
-  const [editUsuario,  setEditUsuario]  = useState(null);
-
+  const { t } = useTheme();
   const usuarioActual = JSON.parse(localStorage.getItem('usuario') || '{}');
 
-  const fetchUsuarios = useCallback(async () => {
-    setLoading(true);
+  const [usuarios, setUsuarios] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+  const [showCrear, setCrear]   = useState(false);
+  const [confirm, setConfirm]   = useState(null);
+  const [confirmLoading, setCL] = useState(false);
+
+  useEffect(() => { cargar(); }, []);
+
+  async function cargar() {
     try {
+      setLoading(true);
       const { data } = await api.get('/api/auth/usuarios/');
-      setUsuarios(data.results || data);
+      setUsuarios(data);
     } catch {
-      toast.error('Error al cargar los usuarios');
+      setError('No se pudo cargar la lista de usuarios.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
-  useEffect(() => { fetchUsuarios(); }, [fetchUsuarios]);
+  const stats = {
+    total:      usuarios.length,
+    admins:     usuarios.filter(u => u.rol === 'admin').length,
+    reclutadores: usuarios.filter(u => u.rol === 'reclutador').length,
+    otros:      usuarios.filter(u => !['admin','reclutador'].includes(u.rol)).length,
+  };
 
-  function onCreado()   { setModalOpen(false); fetchUsuarios(); }
-  function onGuardado() { setEditUsuario(null); fetchUsuarios(); }
+  const card = { background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 12, transition: 'background 0.25s' };
 
-  const total      = usuarios.length;
-  const admins     = usuarios.filter(u => u.rol === 'admin').length;
-  const reclut     = usuarios.filter(u => u.rol === 'reclutador').length;
-  const otros      = usuarios.filter(u => u.rol === 'evaluador' || u.rol === 'gerente').length;
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+      <div style={{ width: 32, height: 32, border: '2.5px solid rgba(124,58,237,0.3)', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 
-  const STATS = [
-    { label: 'Total usuarios',      value: total,   icon: 'ti-users',        color: '#7c3aed' },
-    { label: 'Admins',              value: admins,  icon: 'ti-shield-check', color: '#7c3aed' },
-    { label: 'Reclutadores',        value: reclut,  icon: 'ti-search',       color: '#3b82f6' },
-    { label: 'Evaluadores/Gerentes',value: otros,   icon: 'ti-star',         color: '#10b981' },
-  ];
-
-  const card = { background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 12 };
+  if (error) return (
+    <div style={{ ...card, padding: '14px 18px', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.06)', color: '#f87171', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+      <i className="ti ti-alert-circle" style={{ fontSize: 18 }} /> {error}
+    </div>
+  );
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: t.text, margin: 0 }}>Gestión de Usuarios</h1>
-          <p style={{ fontSize: 13, color: t.textMuted, margin: '4px 0 0' }}>Administra el equipo de RRHH</p>
-        </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            padding: '10px 18px', borderRadius: 10,
-            background: '#7c3aed', border: 'none',
-            color: '#fff', fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
-          }}
-        >
-          <i className="ti ti-user-plus" style={{ fontSize: 16 }} />
-          Nuevo usuario
-        </button>
-      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+      {/* Modales */}
+      {showCrear && <ModalCrear t={t} onClose={() => setCrear(false)} onCreado={u => setUsuarios(prev => [...prev, u])} />}
+      {confirm && <ConfirmModal {...confirm} loading={confirmLoading} onClose={() => { if (!confirmLoading) setConfirm(null); }} />}
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
-        {STATS.map(s => (
-          <div key={s.label} style={{ ...card, padding: '18px 22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                background: `${s.color}1a`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <i className={`ti ${s.icon}`} style={{ fontSize: 20, color: s.color }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: t.text }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: t.textMuted }}>{s.label}</div>
-              </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
+        {[
+          { label: 'Total usuarios', value: stats.total,       icon: 'ti-users',        accent: '#7c3aed' },
+          { label: 'Administradores', value: stats.admins,     icon: 'ti-shield-check', accent: '#a78bfa' },
+          { label: 'Reclutadores',   value: stats.reclutadores,icon: 'ti-user-search',  accent: '#60a5fa' },
+          { label: 'Otros roles',    value: stats.otros,       icon: 'ti-users-group',  accent: '#34d399' },
+        ].map(({ label, value, icon, accent }) => (
+          <div key={label} style={{ ...card, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 10, flexShrink: 0, background: `${accent}18`, border: `1px solid ${accent}28`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <i className={`ti ${icon}`} style={{ fontSize: 20, color: accent }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: t.text, lineHeight: 1 }}>{value}</div>
+              <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>{label}</div>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Encabezado */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+        <button onClick={() => setCrear(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 18px rgba(124,58,237,0.28)' }}>
+          <i className="ti ti-user-plus" style={{ fontSize: 16 }} /> Nuevo usuario
+        </button>
+      </div>
+
       {/* Tabla */}
       <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: 48, textAlign: 'center', color: t.textMuted }}>
-            <i className="ti ti-loader-2" style={{ fontSize: 30, marginBottom: 10, display: 'block' }} />
-            Cargando usuarios...
-          </div>
-        ) : usuarios.length === 0 ? (
-          <div style={{ padding: 56, textAlign: 'center', color: t.textMuted }}>
-            <i className="ti ti-users-group" style={{ fontSize: 36, marginBottom: 10, display: 'block' }} />
-            No hay usuarios registrados
-          </div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${t.divider}` }}>
-                {['Usuario', 'Email', 'Rol', 'Área responsable', 'Estado', 'Acciones'].map(h => (
-                  <th key={h} style={{
-                    padding: '13px 16px', textAlign: 'left',
-                    fontSize: 11.5, fontWeight: 600, color: t.textMuted,
-                    letterSpacing: '0.05em', textTransform: 'uppercase',
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map(u => {
-                const rolCfg = ROL[u.rol] || { label: u.rol, color: t.textMuted, bg: t.toggleBg };
-                const esSelf = u.email === usuarioActual.email;
-                return (
-                  <tr
-                    key={u.id}
-                    style={{ borderBottom: `1px solid ${t.divider}`, transition: 'background 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = t.rowHover}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    {/* Avatar + Nombre */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar nombre={u.nombre} apellidos={u.apellidos} />
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 13.5, fontWeight: 500, color: t.text }}>
-                              {u.nombre_completo || `${u.nombre} ${u.apellidos}`.trim()}
-                            </span>
-                            {esSelf && (
-                              <span style={{
-                                fontSize: 10.5, fontWeight: 600, padding: '1px 6px', borderRadius: 4,
-                                background: 'rgba(124,58,237,0.15)', color: '#a78bfa',
-                              }}>Tú</span>
-                            )}
-                          </div>
-                          {u.telefono && (
-                            <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>{u.telefono}</div>
-                          )}
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${t.cardBorder}` }}>
+              {['Usuario', 'Email', 'Rol', 'Área', 'Estado', 'Acciones'].map(h => (
+                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: t.textFaint, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {usuarios.map((u, i) => {
+              const soyYo = u.email === usuarioActual.email;
+              return (
+                <tr
+                  key={u.id}
+                  style={{ borderBottom: i < usuarios.length - 1 ? `1px solid ${t.cardBorder}` : 'none', transition: 'background 0.12s', opacity: u.is_active ? 1 : 0.5 }}
+                  onMouseEnter={e => e.currentTarget.style.background = t.rowHover}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  {/* Usuario */}
+                  <td style={{ padding: '13px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Avatar nombre={u.nombre} apellidos={u.apellidos} />
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <span style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>{u.nombre} {u.apellidos}</span>
+                          {soyYo && <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(124,58,237,0.12)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.25)', padding: '1px 7px', borderRadius: 4 }}>Tú</span>}
+                          {!u.is_active && <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(107,114,128,0.12)', color: '#6b7280', border: '1px solid rgba(107,114,128,0.2)', padding: '1px 7px', borderRadius: 4 }}>Inactivo</span>}
                         </div>
+                        {u.telefono && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>{u.telefono}</div>}
                       </div>
-                    </td>
+                    </div>
+                  </td>
 
-                    {/* Email */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ fontSize: 13, color: t.textMuted }}>{u.email}</span>
-                    </td>
+                  {/* Email */}
+                  <td style={{ padding: '13px 16px', fontSize: 13, color: t.textMuted }}>{u.email}</td>
 
-                    {/* Rol */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{
-                        fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 5,
-                        background: rolCfg.bg, color: rolCfg.color,
-                      }}>{rolCfg.label}</span>
-                    </td>
+                  {/* Rol */}
+                  <td style={{ padding: '13px 16px' }}><RolBadge rol={u.rol} /></td>
 
-                    {/* Área responsable */}
-                    <td style={{ padding: '12px 16px' }}>
-                      {u.area_responsable_nombre || u.area_responsable?.nombre ? (
-                        <span style={{ fontSize: 13, color: t.text }}>
-                          {u.area_responsable_nombre || u.area_responsable?.nombre}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 12.5, color: t.textFaint }}>—</span>
+                  {/* Área */}
+                  <td style={{ padding: '13px 16px', fontSize: 13, color: t.textMuted }}>{u.area_responsable || '—'}</td>
+
+                  {/* Estado */}
+                  <td style={{ padding: '13px 16px' }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
+                      background: u.is_active ? 'rgba(52,211,153,0.1)' : 'rgba(107,114,128,0.1)',
+                      color: u.is_active ? '#34d399' : '#6b7280',
+                      border: u.is_active ? '1px solid rgba(52,211,153,0.2)' : '1px solid rgba(107,114,128,0.2)',
+                    }}>
+                      <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />
+                      {u.is_active ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+
+                  {/* Acciones */}
+                  <td style={{ padding: '13px 16px' }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {/* Cambiar contraseña — pendiente de backend */}
+                      {!soyYo && (
+                        <button
+                          title="Cambiar contraseña"
+                          onClick={() => setConfirm({
+                            tipo: 'info',
+                            icono: '🔒',
+                            titulo: 'Función en desarrollo',
+                            mensaje: 'El endpoint de cambio de contraseña aún no está disponible en el backend. William debe agregar POST /api/auth/usuarios/{id}/cambiar-password/ para habilitar esta función.',
+                            labelOk: 'Entendido',
+                            labelCancel: null,
+                            onConfirm: () => setConfirm(null),
+                          })}
+                          style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                          onMouseEnter={e => { e.currentTarget.style.color = '#fbbf24'; e.currentTarget.style.borderColor = 'rgba(251,191,36,0.3)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}
+                        >
+                          <i className="ti ti-key" />
+                        </button>
                       )}
-                    </td>
 
-                    {/* Estado */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{
-                        fontSize: 12, fontWeight: 600, padding: '3px 9px', borderRadius: 5,
-                        background: u.is_active ? '#34d39918' : 'rgba(156,163,175,0.15)',
-                        color: u.is_active ? '#34d399' : '#9ca3af',
-                      }}>
-                        {u.is_active ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
+                      {/* Desactivar/activar — pendiente de backend */}
+                      {!soyYo && (
+                        <button
+                          title={u.is_active ? 'Desactivar usuario' : 'Activar usuario'}
+                          onClick={() => setConfirm({
+                            tipo: 'info',
+                            icono: '⚙️',
+                            titulo: 'Función en desarrollo',
+                            mensaje: `El endpoint de ${u.is_active ? 'desactivación' : 'activación'} de usuarios aún no está disponible en el backend. William debe agregar POST /api/auth/usuarios/{id}/${u.is_active ? 'desactivar' : 'activar'}/ para habilitar esta función.`,
+                            labelOk: 'Entendido',
+                            labelCancel: null,
+                            onConfirm: () => setConfirm(null),
+                          })}
+                          style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                          onMouseEnter={e => { e.currentTarget.style.color = u.is_active ? '#f87171' : '#34d399'; e.currentTarget.style.borderColor = u.is_active ? 'rgba(239,68,68,0.3)' : 'rgba(52,211,153,0.3)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}
+                        >
+                          <i className={`ti ${u.is_active ? 'ti-user-off' : 'ti-user-check'}`} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
 
-                    {/* Acciones */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <button
-                        onClick={() => setEditUsuario(u)}
-                        title="Editar usuario"
-                        style={{
-                          width: 30, height: 30, borderRadius: 7,
-                          background: 'transparent', border: `1px solid ${t.cardBorder}`,
-                          cursor: 'pointer', color: t.textMuted,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.1)'; e.currentTarget.style.color = '#7c3aed'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.3)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}
-                      >
-                        <i className="ti ti-pencil" style={{ fontSize: 14 }} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {usuarios.length === 0 && (
+          <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+            <i className="ti ti-users-off" style={{ fontSize: 40, color: t.textFaint, display: 'block', marginBottom: 12 }} />
+            <div style={{ color: t.textMuted, fontSize: 14 }}>No hay usuarios registrados.</div>
+          </div>
         )}
       </div>
 
-      {/* Modal crear */}
-      {modalOpen && (
-        <UsuarioModal
-          onClose={() => setModalOpen(false)}
-          onCreado={onCreado}
-          t={t}
-          dark={dark}
-        />
-      )}
-
-      {/* Modal editar */}
-      {editUsuario && (
-        <EditUsuarioModal
-          usuario={editUsuario}
-          onClose={() => setEditUsuario(null)}
-          onGuardado={onGuardado}
-          t={t}
-          dark={dark}
-        />
-      )}
+      {/* Nota sobre endpoints pendientes */}
+      <div style={{ marginTop: 14, padding: '10px 16px', borderRadius: 8, background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', fontSize: 12.5, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <i className="ti ti-info-circle" style={{ fontSize: 15, flexShrink: 0 }} />
+        Los botones de cambiar contraseña y desactivar usuario estarán activos cuando William agregue los endpoints correspondientes al backend.
+      </div>
     </div>
   );
 }

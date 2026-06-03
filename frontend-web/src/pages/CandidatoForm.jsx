@@ -4,6 +4,7 @@ import { useTheme } from '../App';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
+// ─── Fuera del componente ─────────────────────────────────────────────────────
 function Field({ label, required, hint, textMuted, children }) {
   return (
     <div>
@@ -17,17 +18,11 @@ function Field({ label, required, hint, textMuted, children }) {
 }
 
 const INITIAL = {
-  vacante:              '',
-  nombre:               '',
-  apellido_paterno:     '',
-  apellido_materno:     '',
-  email:                '',
-  telefono:             '',
-  ciudad:               '',
-  linkedin:             '',
-  nivel_educativo:      '',
-  carrera:              '',
-  anios_experiencia:    0,
+  vacante: '', nombre: '', apellido_paterno: '', apellido_materno: '',
+  email: '', telefono: '', ciudad: '', linkedin: '',
+  pretension_salarial: '', // NUEVO
+  disponibilidad: '',      // NUEVO
+  nivel_educativo: '', carrera: '', anios_experiencia: 0,
   habilidades_declaradas: '',
 };
 
@@ -35,11 +30,11 @@ export default function CandidatoForm() {
   const { t } = useTheme();
   const navigate = useNavigate();
 
-  const [form, setForm]       = useState(INITIAL);
-  const [cvFile, setCvFile]   = useState(null);
+  const [form, setForm]         = useState(INITIAL);
+  const [cvFile, setCvFile]     = useState(null);
   const [vacantes, setVacantes] = useState([]);
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState(null);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState(null);
 
   const inp = {
     width: '100%', boxSizing: 'border-box',
@@ -88,12 +83,7 @@ export default function CandidatoForm() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
-
-    if (!cvFile) {
-      setError('El CV en PDF es obligatorio.');
-      return;
-    }
-
+    if (!cvFile) { setError('El CV en PDF es obligatorio.'); return; }
     setSaving(true);
 
     const fd = new FormData();
@@ -103,18 +93,13 @@ export default function CandidatoForm() {
     fd.append('cv', cvFile);
 
     try {
-      await api.post('/api/candidatos/', fd, {
-        headers: { 'Content-Type': undefined },
-      });
+      await api.post('/api/candidatos/', fd, { headers: { 'Content-Type': undefined } });
       toast.success('Candidato registrado correctamente.');
       navigate('/candidatos');
     } catch (err) {
       const d = err.response?.data;
       if (d && typeof d === 'object') {
-        const msgs = Object.entries(d)
-          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
-          .join(' | ');
-        setError(msgs);
+        setError(Object.entries(d).map(([k,v]) => `${k}: ${Array.isArray(v)?v.join(', '):v}`).join(' | '));
       } else {
         setError('Error al guardar. Verifica los campos.');
       }
@@ -136,7 +121,6 @@ export default function CandidatoForm() {
         <span style={{ color: t.text }}>Registrar candidato</span>
       </div>
 
-      {/* Error */}
       {error && (
         <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, color: '#f87171', fontSize: 13, display: 'flex', gap: 8 }}>
           <i className="ti ti-alert-circle" style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }} /> {error}
@@ -152,15 +136,12 @@ export default function CandidatoForm() {
             <select name="vacante" value={form.vacante} onChange={handleChange} required style={{ ...inp, cursor: 'pointer' }}>
               <option value="">— Selecciona una vacante —</option>
               {vacantes.map(v => (
-                <option key={v.id} value={v.id}>
-                  {v.titulo} {v.ciudad ? `· ${v.ciudad}` : ''}
-                </option>
+                <option key={v.id} value={v.id}>{v.titulo} {v.ciudad ? `· ${v.ciudad}` : ''}</option>
               ))}
             </select>
             {vacantes.length === 0 && (
               <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 5, display: 'flex', alignItems: 'center', gap: 5 }}>
-                <i className="ti ti-alert-triangle" style={{ fontSize: 13 }} />
-                No hay vacantes abiertas. Crea una primero.
+                <i className="ti ti-alert-triangle" style={{ fontSize: 13 }} /> No hay vacantes abiertas. Crea una primero.
               </div>
             )}
           </Field>
@@ -184,7 +165,7 @@ export default function CandidatoForm() {
 
         {/* ── Contacto ── */}
         <div style={section}>
-          <div style={sTitle}><i className="ti ti-mail" style={{ fontSize: 14 }} /> Contacto</div>
+          <div style={sTitle}><i className="ti ti-mail" style={{ fontSize: 14 }} /> Contacto y disponibilidad</div>
           <div style={g2}>
             <Field label="Email" required textMuted={t.textMuted}>
               <input name="email" value={form.email} onChange={handleChange} type="email" required style={inp} placeholder="juan@email.com" />
@@ -197,6 +178,13 @@ export default function CandidatoForm() {
             </Field>
             <Field label="LinkedIn" textMuted={t.textMuted} hint="URL completa del perfil">
               <input name="linkedin" value={form.linkedin} onChange={handleChange} type="url" style={inp} placeholder="https://linkedin.com/in/..." />
+            </Field>
+            {/* NUEVOS */}
+            <Field label="Pretensión salarial" textMuted={t.textMuted} hint="Opcional — en la moneda de la vacante">
+              <input name="pretension_salarial" value={form.pretension_salarial} onChange={handleChange} type="number" min={0} style={inp} placeholder="3500" />
+            </Field>
+            <Field label="Disponibilidad de inicio" textMuted={t.textMuted} hint="Ej: Inmediata, 15 días, 1 mes">
+              <input name="disponibilidad" value={form.disponibilidad} onChange={handleChange} style={inp} placeholder="Inmediata" />
             </Field>
           </div>
         </div>
@@ -242,20 +230,13 @@ export default function CandidatoForm() {
               background: cvFile ? 'rgba(124,58,237,0.05)' : t.inputBg,
               transition: 'all 0.2s', cursor: 'pointer', position: 'relative',
             }}>
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFile}
-                style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-              />
+              <input type="file" accept=".pdf" onChange={handleFile} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
               {cvFile ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                   <i className="ti ti-file-type-pdf" style={{ fontSize: 22, color: '#a78bfa' }} />
                   <div>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>{cvFile.name}</div>
-                    <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 2 }}>
-                      {(cvFile.size / 1024).toFixed(1)} KB — Haz clic para cambiar
-                    </div>
+                    <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 2 }}>{(cvFile.size / 1024).toFixed(1)} KB — Haz clic para cambiar</div>
                   </div>
                 </div>
               ) : (
@@ -274,14 +255,7 @@ export default function CandidatoForm() {
           <button type="button" onClick={() => navigate('/candidatos')} style={{ padding: '9px 20px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: 'transparent', color: t.textMuted, fontSize: 13.5, cursor: 'pointer' }}>
             Cancelar
           </button>
-          <button type="submit" disabled={saving} style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '9px 24px', borderRadius: 9, border: 'none',
-            background: saving ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
-            color: '#fff', fontSize: 13.5, fontWeight: 600,
-            cursor: saving ? 'wait' : 'pointer',
-            boxShadow: saving ? 'none' : '0 0 20px rgba(124,58,237,0.3)',
-          }}>
+          <button type="submit" disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 24px', borderRadius: 9, border: 'none', background: saving ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: saving ? 'wait' : 'pointer', boxShadow: saving ? 'none' : '0 0 20px rgba(124,58,237,0.3)' }}>
             {saving && <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />}
             {saving ? 'Registrando...' : 'Registrar candidato'}
           </button>
