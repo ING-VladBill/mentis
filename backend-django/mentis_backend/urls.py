@@ -18,6 +18,7 @@ from autenticacion.views import (
     validar_token_acceso, registro_candidato_con_token,
     login_candidato, perfil_usuario,
     crear_usuario_rrhh, listar_usuarios_rrhh,
+    desactivar_usuario, activar_usuario, cambiar_password_usuario,
 )
 
 router = DefaultRouter()
@@ -39,14 +40,19 @@ urlpatterns = [
     path('api/auth/registro-candidato/',  registro_candidato_con_token,    name='auth-registro-candidato'),
     path('api/auth/login-candidato/',     login_candidato,                 name='auth-login-candidato'),
     path('api/auth/perfil/',              perfil_usuario,                  name='auth-perfil'),
-    path('api/auth/usuarios/',            listar_usuarios_rrhh,            name='auth-usuarios-list'),
-    path('api/auth/usuarios/crear/',      crear_usuario_rrhh,              name='auth-usuarios-crear'),
+
+    # Gestión de usuarios RRHH
+    path('api/auth/usuarios/',                       listar_usuarios_rrhh,      name='auth-usuarios-list'),
+    path('api/auth/usuarios/crear/',                 crear_usuario_rrhh,        name='auth-usuarios-crear'),
+    path('api/auth/usuarios/<int:pk>/desactivar/',   desactivar_usuario,        name='auth-usuarios-desactivar'),
+    path('api/auth/usuarios/<int:pk>/activar/',      activar_usuario,           name='auth-usuarios-activar'),
+    path('api/auth/usuarios/<int:pk>/cambiar-password/', cambiar_password_usuario, name='auth-usuarios-password'),
 
     # ------------------------------------------
     # FORMULARIO PÚBLICO (sin login)
     # ------------------------------------------
-    path('api/postular/<str:codigo>/',    formulario_publico_info,         name='postular-info'),
-    path('api/postular/<str:codigo>/enviar/', formulario_publico_postular, name='postular-enviar'),
+    path('api/postular/<str:codigo>/',         formulario_publico_info,     name='postular-info'),
+    path('api/postular/<str:codigo>/enviar/',  formulario_publico_postular, name='postular-enviar'),
 
     # ------------------------------------------
     # API REST (router)

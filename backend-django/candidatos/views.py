@@ -38,14 +38,27 @@ class TagViewSet(viewsets.ModelViewSet):
     """CRUD de tags para etiquetar candidatos."""
     serializer_class = TagSerializer
     permission_classes = [EsReclutadorOAdmin]
-
+ 
     def get_queryset(self):
         return Tag.objects.all()
-
+ 
     def perform_create(self, serializer):
         serializer.save(creado_por=self.request.user)
-
-
+ 
+    def destroy(self, request, *args, **kwargs):
+        """
+        DELETE /api/tags/{id}/
+        No permite eliminar un tag si tiene candidatos asociados.
+        Primero hay que desasociarlo de todos los candidatos.
+        """
+        tag = self.get_object()
+        total = tag.candidatos.count()
+        if total > 0:
+            return Response(
+                {'error': f'No puedes eliminar este tag porque está asignado a {total} candidato(s). Quítalo de ellos primero.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().destroy(request, *args, **kwargs)
 # ==========================================
 # CANDIDATO VIEWSET
 # ==========================================

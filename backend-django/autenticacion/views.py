@@ -1,6 +1,5 @@
 # ==========================================
-# autenticacion/views.py 
-# Agrega correo de bienvenida al crear usuario RRHH
+# autenticacion/views.py (Sprint 2 - completo)
 # ==========================================
 
 from rest_framework import status
@@ -10,8 +9,6 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-
-from candidatos.servicios.correos import enviar_correo_bienvenida_rrhh
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -23,6 +20,7 @@ from .serializers import (
     ValidarTokenAccesoSerializer,
     RegistroCandidatoConTokenSerializer,
 )
+from candidatos.servicios.correos import enviar_correo_bienvenida_rrhh
 
 Usuario = get_user_model()
 
@@ -124,10 +122,7 @@ def crear_usuario_rrhh(request):
     if serializer.is_valid():
         password_temporal = request.data.get('password')
         user = serializer.save()
-
-        # Enviar correo de bienvenida con credenciales
         enviar_correo_bienvenida_rrhh(user, password_temporal, request.user.nombre_completo)
-
         return Response(UsuarioSerializer(user).data, status=201)
     return Response(serializer.errors, status=400)
 
@@ -140,3 +135,89 @@ def listar_usuarios_rrhh(request):
     usuarios = Usuario.objects.exclude(rol='candidato').order_by('apellidos')
     return Response(UsuarioSerializer(usuarios, many=True).data)
 
+
+# ==========================================
+# GESTIÓN DE ESTADO Y CONTRASEÑA DE USUARIOS
+# ==========================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def desactivar_usuario(request, pk):
+    """
+    POST /api/auth/usuarios/{id}/desactivar/
+    Corta el acceso de un usuario (ej: empleado que deja la empresa).
+    No elimina la cuenta, preserva el historial.
+    """
+    if not request.user.es_admin:
+        return Response({'error': 'Solo los administradores pueden desactivar usuarios.'}, status=403)
+
+    try:
+        usuario = Usuario.objects.get(pk=pk)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuario no encontrado.'}, status=404)
+
+    if usuario.id == request.user.id:
+        return Response({'error': 'No puedes desactivar tu propia cuenta.'}, status=400)
+
+    if usuario.rol == 'admin':
+        admins_activos = Usuario.objects.filter(rol='admin', is_active=True).exclude(pk=usuario.pk).count()
+        if admins_activos == 0:
+            return Response({'error': 'No puedes desactivar al único administrador activo del sistema.'}, status=400)
+
+    usuario.is_active = False
+    usuario.save(update_fields=['is_active'])
+    return Response({
+        'mensaje':  f'Usuario {usuario.nombre_completo} desactivado. Su acceso fue cortado.',
+        'usuario':  UsuarioSerializer(usuario).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def activar_usuario(request, pk):
+    """
+    POST /api/auth/usuarios/{id}/activar/
+    Reactiva el acceso de un usuario previamente desactivado.
+    """
+    if not request.user.es_admin:
+        return Response({'error': 'Solo los administradores pueden activar usuarios.'}, status=403)
+
+    try:
+        usuario = Usuario.objects.get(pk=pk)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuario no encontrado.'}, status=404)
+
+    usuario.is_active = True
+    usuario.save(update_fields=['is_active'])
+    return Response({
+        'mensaje':  f'Usuario {usuario.nombre_completo} reactivado. Puede volver a iniciar sesión.',
+        'usuario':  UsuarioSerializer(usuario).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cambiar_password_usuario(request, pk):
+    """
+    POST /api/auth/usuarios/{id}/cambiar-password/
+    Permite al admin resetear la contraseña de otro usuario.
+    Body: { "password_nuevo": "..." }
+    """
+    if not request.user.es_admin:
+        return Response({'error': 'Solo los administradores pueden cambiar contraseñas.'}, status=403)
+
+    if int(pk) == request.user.id:
+        return Response({'error': 'Para cambiar tu propia contraseña usa la opción de perfil.'}, status=400)
+
+    try:
+        usuario = Usuario.objects.get(pk=pk)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuario no encontrado.'}, status=404)
+
+    password_nuevo = request.data.get('password_nuevo', '')
+    if not password_nuevo or len(password_nuevo) < 6:
+        return Response({'error': 'La contraseña debe tener al menos 6 caracteres.'}, status=400)
+
+    usuario.set_password(password_nuevo)
+    usuario.save(update_fields=['password'])
+    return Response({'mensaje': f'Contraseña de {usuario.nombre_completo} actualizada correctamente.'})
