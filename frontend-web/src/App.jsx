@@ -9,12 +9,12 @@ import VacantesList   from './pages/VacantesList';
 import VacanteForm    from './pages/VacanteForm';
 import CandidatoForm  from './pages/CandidatoForm';
 import CandidatosList from './pages/CandidatosList';
-import Areas          from './pages/Areas';
-import Usuarios         from './pages/Usuarios';
 import CandidatoDetalle from './pages/CandidatoDetalle';
-import Ranking          from './pages/Ranking';
-import CargaMasiva      from './pages/CargaMasiva';
 import Login          from './pages/Login';
+import Usuarios       from './pages/Usuarios';
+import Areas          from './pages/Areas';
+import Ranking        from './pages/Ranking';
+import CargaMasiva    from './pages/CargaMasiva';
 import ProtectedRoute from './components/ProtectedRoute';
 import api            from './services/api';
 
@@ -78,13 +78,14 @@ function Sidebar() {
     : nombre.slice(0, 2).toUpperCase();
 
   const NAV_MAIN = [
-    { to: '/vacantes',   icon: 'ti-briefcase',    label: 'Vacantes'   },
-    { to: '/candidatos', icon: 'ti-users',         label: 'Candidatos' },
-    { to: '/areas',      icon: 'ti-layout-grid',   label: 'Áreas'      },
-    { to: '/usuarios',   icon: 'ti-users-group',   label: 'Usuarios'   },
-    { to: '/ranking',      icon: 'ti-trophy',  label: 'Ranking'      },
-    { to: '/carga-masiva', icon: 'ti-files',   label: 'Carga masiva' },
+    { to: '/vacantes',    icon: 'ti-briefcase',    label: 'Vacantes'     },
+    { to: '/candidatos',  icon: 'ti-users',        label: 'Candidatos'   },
+    { to: '/ranking',     icon: 'ti-trophy',       label: 'Ranking'      },
+    { to: '/carga-masiva',icon: 'ti-files',        label: 'Carga masiva' },
+    { to: '/areas',       icon: 'ti-layout-grid',  label: 'Áreas'        },
+    { to: '/usuarios',    icon: 'ti-users-group',  label: 'Usuarios'     },
   ];
+
   const NAV_SOON = [
     { icon: 'ti-checklist',    label: 'Evaluaciones'   },
     { icon: 'ti-robot',        label: 'Entrevistas IA' },
@@ -114,7 +115,6 @@ function Sidebar() {
       position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100,
       transition: 'background 0.25s, border-color 0.25s',
     }}>
-
       {/* Logo */}
       <div style={{ padding: '22px 18px 18px', borderBottom: `1px solid ${t.sidebarBorder}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -169,11 +169,7 @@ function Sidebar() {
           }}>
             <i className={`ti ${icon}`} style={{ fontSize: 17 }} />
             {label}
-            <span style={{
-              marginLeft: 'auto', fontSize: 10,
-              background: t.toggleBg, color: t.textFaint,
-              padding: '2px 7px', borderRadius: 5,
-            }}>Pronto</span>
+            <span style={{ marginLeft: 'auto', fontSize: 10, background: t.toggleBg, color: t.textFaint, padding: '2px 7px', borderRadius: 5 }}>Pronto</span>
           </div>
         ))}
       </nav>
@@ -298,21 +294,21 @@ const PAGE_META = {
   '/vacantes/nueva':       { title: 'Nueva vacante',       subtitle: 'Crear una nueva posición' },
   '/candidatos':           { title: 'Candidatos',          subtitle: 'Listado de todos los postulantes' },
   '/candidatos/registrar': { title: 'Registrar candidato', subtitle: 'Agregar nuevo postulante' },
-  '/areas':                { title: 'Áreas',               subtitle: 'Gestiona las áreas del sistema' },
-  '/usuarios':             { title: 'Usuarios',            subtitle: 'Equipo de recursos humanos' },
   '/ranking':              { title: 'Ranking',             subtitle: 'Comparativa de candidatos por vacante' },
-  '/carga-masiva':         { title: 'Carga masiva',        subtitle: 'Sube múltiples CVs en un solo lote'    },
+  '/carga-masiva':         { title: 'Carga masiva',        subtitle: 'Sube múltiples CVs en un solo lote' },
+  '/areas':                { title: 'Áreas',               subtitle: 'Gestión de áreas y etiquetas' },
+  '/usuarios':             { title: 'Usuarios',            subtitle: 'Equipo de recursos humanos' },
 };
 
 function Layout() {
   const { t } = useTheme();
   const location = useLocation();
-  const editMatch      = location.pathname.match(/^\/vacantes\/(\d+)\/editar$/);
-  const candidatoMatch = location.pathname.match(/^\/candidatos\/(\d+)$/);
+  const editMatch  = location.pathname.match(/^\/vacantes\/(\d+)\/editar$/);
+  const detailMatch = location.pathname.match(/^\/candidatos\/(\d+)$/);
   const meta = editMatch
-    ? { title: 'Editar vacante',       subtitle: `Modificando vacante #${editMatch[1]}` }
-    : candidatoMatch
-    ? { title: 'Detalle de candidato', subtitle: `Candidato #${candidatoMatch[1]}` }
+    ? { title: 'Editar vacante',   subtitle: `Modificando vacante #${editMatch[1]}` }
+    : detailMatch
+    ? { title: 'Detalle candidato', subtitle: `Candidato #${detailMatch[1]}` }
     : (PAGE_META[location.pathname] || { title: 'MENTIS', subtitle: '' });
 
   return (
@@ -327,16 +323,16 @@ function Layout() {
         <Topbar title={meta.title} subtitle={meta.subtitle} />
         <main style={{ flex: 1, padding: '26px 28px' }}>
           <Routes>
-            <Route path="/vacantes"             element={<ProtectedRoute><VacantesList /></ProtectedRoute>} />
-            <Route path="/vacantes/nueva"       element={<ProtectedRoute><VacanteForm /></ProtectedRoute>} />
-            <Route path="/vacantes/:id/editar"  element={<ProtectedRoute><VacanteForm /></ProtectedRoute>} />
-            <Route path="/candidatos/registrar" element={<ProtectedRoute><CandidatoForm /></ProtectedRoute>} />
-            <Route path="/candidatos"           element={<ProtectedRoute><CandidatosList /></ProtectedRoute>} />
-            <Route path="/areas"                element={<ProtectedRoute><Areas /></ProtectedRoute>} />
-            <Route path="/usuarios"             element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
-            <Route path="/candidatos/:id"       element={<ProtectedRoute><CandidatoDetalle /></ProtectedRoute>} />
-            <Route path="/ranking"              element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
-            <Route path="/carga-masiva"         element={<ProtectedRoute><CargaMasiva /></ProtectedRoute>} />
+            <Route path="/vacantes"              element={<ProtectedRoute><VacantesList /></ProtectedRoute>} />
+            <Route path="/vacantes/nueva"        element={<ProtectedRoute><VacanteForm /></ProtectedRoute>} />
+            <Route path="/vacantes/:id/editar"   element={<ProtectedRoute><VacanteForm /></ProtectedRoute>} />
+            <Route path="/candidatos"            element={<ProtectedRoute><CandidatosList /></ProtectedRoute>} />
+            <Route path="/candidatos/registrar"  element={<ProtectedRoute><CandidatoForm /></ProtectedRoute>} />
+            <Route path="/candidatos/:id"        element={<ProtectedRoute><CandidatoDetalle /></ProtectedRoute>} />
+            <Route path="/ranking"               element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+            <Route path="/carga-masiva"          element={<ProtectedRoute><CargaMasiva /></ProtectedRoute>} />
+            <Route path="/areas"                 element={<ProtectedRoute><Areas /></ProtectedRoute>} />
+            <Route path="/usuarios"              element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
           </Routes>
         </main>
       </div>
@@ -357,24 +353,49 @@ export default function App() {
 
   const t = tokens(dark);
 
+  // ─── Estilos globales para selects (fix modo oscuro/claro) ────────────────
+  const globalSelectStyles = `
+    select, select option {
+      background-color: ${dark ? '#1a1a24' : '#ffffff'} !important;
+      color: ${dark ? '#f0f0f0' : '#111118'} !important;
+    }
+    select {
+      color-scheme: ${dark ? 'dark' : 'light'};
+    }
+    select:focus {
+      outline: none;
+    }
+    * { box-sizing: border-box; }
+    @keyframes spin { to { transform: rotate(360deg) } }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
+    @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.4 } }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.15)'}; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: ${dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.25)'}; }
+  `;
+
   return (
     <ThemeContext.Provider value={{ dark, toggle: () => setDark(d => !d), t }}>
+      <style>{globalSelectStyles}</style>
       <BrowserRouter>
         <Toaster
           position="top-right"
           toastOptions={{
             style: {
-              background: '#1a1a24',
-              color: '#f0f0f0',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: dark ? '#1a1a24' : '#ffffff',
+              color:      dark ? '#f0f0f0' : '#111118',
+              border:     dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
               fontSize: 13,
             },
-            success: { iconTheme: { primary: '#34d399', secondary: '#1a1a24' } },
-            error:   { iconTheme: { primary: '#f87171', secondary: '#1a1a24' } },
+            success: { iconTheme: { primary: '#34d399', secondary: dark ? '#1a1a24' : '#fff' } },
+            error:   { iconTheme: { primary: '#f87171', secondary: dark ? '#1a1a24' : '#fff' } },
           }}
         />
         <Routes>
-          {/* Ruta raíz — redirige según si hay token */}
+          {/* Ruta raíz */}
           <Route
             path="/"
             element={
@@ -383,10 +404,8 @@ export default function App() {
                 : <Navigate to="/login" replace />
             }
           />
-
           {/* Pública */}
           <Route path="/login" element={<Login />} />
-
           {/* Todo lo demás pasa por Layout */}
           <Route path="/*" element={<Layout />} />
         </Routes>
