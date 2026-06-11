@@ -227,7 +227,12 @@ export default function VacantesList() {
                       <span style={{ fontSize: 11.5, fontFamily: 'monospace', color: t.textFaint, background: t.toggleBg, padding: '3px 8px', borderRadius: 5 }}>{v.codigo}</span>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>{v.titulo}</div>
+                      <div
+                        onClick={() => navigate(`/vacantes/${v.id}`)}
+                        style={{ fontSize: 13.5, fontWeight: 600, color: t.text, cursor: 'pointer', transition: 'color 0.15s' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#a78bfa'}
+                        onMouseLeave={e => e.currentTarget.style.color = t.text}
+                      >{v.titulo}</div>
                       {v.departamento && <div style={{ fontSize: 11, color: t.textFaint, marginTop: 2 }}>{v.departamento}</div>}
                       {v.confidencial && <div style={{ fontSize: 10, color: '#f59e0b', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}><i className="ti ti-eye-off" style={{ fontSize: 11 }} /> Confidencial</div>}
                     </td>
