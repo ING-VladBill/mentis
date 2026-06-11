@@ -7,6 +7,7 @@ import { Toaster } from 'react-hot-toast';
 
 import VacantesList   from './pages/VacantesList';
 import VacanteForm    from './pages/VacanteForm';
+import VacanteDetalle from './pages/VacanteDetalle';
 import CandidatoForm  from './pages/CandidatoForm';
 import CandidatosList from './pages/CandidatosList';
 import CandidatoDetalle from './pages/CandidatoDetalle';
@@ -325,6 +326,7 @@ function Layout() {
           <Routes>
             <Route path="/vacantes"              element={<ProtectedRoute><VacantesList /></ProtectedRoute>} />
             <Route path="/vacantes/nueva"        element={<ProtectedRoute><VacanteForm /></ProtectedRoute>} />
+            <Route path="/vacantes/:id"          element={<ProtectedRoute><VacanteDetalle /></ProtectedRoute>} />
             <Route path="/vacantes/:id/editar"   element={<ProtectedRoute><VacanteForm /></ProtectedRoute>} />
             <Route path="/candidatos"            element={<ProtectedRoute><CandidatosList /></ProtectedRoute>} />
             <Route path="/candidatos/registrar"  element={<ProtectedRoute><CandidatoForm /></ProtectedRoute>} />
