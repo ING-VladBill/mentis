@@ -1,98 +1,81 @@
-#  MENTIS - Sistema Inteligente de Reclutamiento
+# MENTIS — Módulo Usuario (Spring Boot)
 
-![Status](https://img.shields.io/badge/Status-Sprint%201-blue)
-![Python](https://img.shields.io/badge/Python-3.10+-green)
-![React](https://img.shields.io/badge/React-18-blue)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+Backend del módulo Usuario: exámenes técnicos generados y calificados por IA (Gemini),
+con auditoría básica y ranking automático. Comparte la base de datos MySQL con el
+backend Django del módulo Administración.
 
-Sistema MVP de automatización de procesos de selección de personal utilizando Inteligencia Artificial.
+## Regla de oro
+**Django es el dueño del esquema.** Este proyecto tiene `ddl-auto=none`: nunca crea
+ni modifica tablas. Antes de arrancar, aplica las migraciones de Django (paso 1).
 
-## 📦 Estructura del Monorepo
+## Setup
 
-```bash
-mentis/
-├── backend-django/          # API principal - Gestión de vacantes y candidatos
-├── backend-springboot/      # Microservicio de evaluaciones técnicas
-├── frontend-web/            # Dashboard RRHH (React + Vite)
-├── mobile-android/          # App para candidatos (Kotlin)
-└── docs/                    # Documentación de sprints
+### 1. Actualizar el esquema en Django (UNA VEZ)
+Reemplaza `backend-django/evaluaciones/models.py` con el archivo
+`django-update/evaluaciones_models.py` incluido en esta entrega, y corre:
 ```
-## 🛠️ Stack Tecnológico
-
-| Capa | Tecnología |
-|------|------------|
-| **Frontend Web** | React 18, Vite, Axios, React Router |
-| **Backend Admin** | Django 4.2, Django REST Framework, MySQL |
-| **Backend Evaluaciones** | Spring Boot 3, Java 17, JPA |
-| **Mobile** | Kotlin, Jetpack Compose, Retrofit |
-| **Base de Datos** | MySQL 8.0 (XAMPP) |
-| **IA** | OpenAI API (GPT-4) |
-| **DevOps** | Git, GitHub |
-
-## 🏃 Plan de Sprints
-
-| Sprint | Duración | Estado | Objetivos |
-|--------|----------|--------|-----------|
-| **Sprint 1** | 2 días | 🟢 En progreso | Fundación: CRUD vacantes y candidatos |
-| **Sprint 2** | 3 días | ⚪ Pendiente | IA: Análisis automático de CV |
-| **Sprint 3** | 3 días | ⚪ Pendiente | Evaluaciones técnicas automatizadas |
-| **Sprint 4** | 3 días | ⚪ Pendiente | Entrevista con IA |
-| **Sprint 5** | 3 días | ⚪ Pendiente | Integración final y demo |
-
-📄 Ver detalles en [`docs/sprint-1.md`](docs/sprint-1.md)
-
-## 🚀 Setup Rápido
-
-### Base de Datos (MySQL)
-1. Abrir XAMPP Control Panel
-2. Start Apache y MySQL
-3. Abrir phpMyAdmin (http://localhost/phpmyadmin)
-4. Crear database: `mentis_db`
-
-### Backend Django
-```bash
-cd backend-django
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
+python manage.py makemigrations evaluaciones
 python manage.py migrate
-python manage.py runserver
 ```
 
-### Frontend React
-```bash
-cd frontend-web
-npm install
-npm run dev
+### 2. Configurar el .env
+Copia `.env.example` como `.env` (junto al pom.xml) y completa:
+```
+DB_NAME=mentis_db
+DB_USER=root
+DB_PASSWORD=
+GEMINI_API_KEY=AIza...
+JWT_SECRET=un-secreto-de-32-caracteres-minimo
 ```
 
-## 📊 Flujo del Sistema
+### 3. Arrancar
+```
+mvn spring-boot:run
+```
+Corre en http://localhost:8080. Probar: `GET /api/usuario/health`
+
+## Flujo del examen
 
 ```
-1. RRHH crea vacante → 2. Candidato se registra → 
-3. IA analiza CV → 4. Sistema clasifica → 
-5. Envía evaluación → 6. Candidato responde →
-7. IA evalúa respuestas → 8. RRHH revisa finalistas
+1. Candidato recibe correo con link único (lo envía Django al aprobar su CV)
+2. POST /api/usuario/auth/acceso  { "token": "<uuid del link>" }
+   → valida el token (48h), devuelve JWT + datos del candidato
+3. POST /api/usuario/examen/iniciar   (Bearer JWT)
+   → 1ra vez: Gemini genera 10 preguntas personalizadas (6 MC + 4 abiertas)
+   → marca inicio, arranca el timer de 45 min
+4. POST /api/usuario/examen/respuesta { "preguntaId": 1, "respuesta": "..." }
+   → guardado incremental: el candidato puede retomar si se interrumpe
+5. POST /api/usuario/examen/evento    { "tipo": "perdida_foco", "detalle": "..." }
+   → auditoría básica (el front lo llama al detectar el evento)
+6. POST /api/usuario/examen/finalizar
+   → MC ya calificadas + Gemini califica las abiertas en batch
+   → nota sobre 20, aprueba si >= nota_minima de la vacante (default 13)
+   → actualiza candidato (score_examen, estado, score_final) y ranking
+   → invalida el token (un examen, un uso)
+   → NO revela la nota (política de silencio profesional)
+7. GET /api/usuario/examen → estado/retomar (devuelve segundos_restantes)
 ```
 
-## 👥 Equipo Scrum
+Si el tiempo se agota, el examen se autofinaliza con las respuestas guardadas.
 
-- **Scrum Master & Dev Lead:** William Julon 
-- **Desarrolladores:** Gabriel Llanos, Alexander Sanabria y Harold Eduardo Santivañez.
+## Endpoints
 
-## 📝 Commits Convention
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| GET  | /api/usuario/health | — | Health check |
+| POST | /api/usuario/auth/acceso | — | Canjea token UUID por JWT |
+| POST | /api/usuario/examen/iniciar | JWT | Genera (1ra vez) e inicia |
+| GET  | /api/usuario/examen | JWT | Estado / retomar |
+| POST | /api/usuario/examen/respuesta | JWT | Guarda una respuesta |
+| POST | /api/usuario/examen/finalizar | JWT | Califica y cierra |
+| POST | /api/usuario/examen/evento | JWT | Registra evento auditoría |
 
-**-** ```git commit -m "[Sprint x] Descripción breve"```
-```
-Ejemplos:
-"[Sprint 1] Setup Django project + MySql"
-[Sprint 1] Create Vacante model and CRUD endpoints
-[Sprint 2] Integrate OpenAI for CV analysis
-```
-## 📜 Licencia
+Tipos de evento de auditoría: `perdida_foco`, `cambio_ventana`, `copy_paste`,
+`click_derecho`, `devtools`, `inactividad`, `otro`.
 
-MIT License - Ver [LICENSE](LICENSE) para más detalles
-
----
-
-**Última actualización:** Sprint 1 - Día 1
+## Notas técnicas
+- Los UUID de Django se guardan SIN guiones en MySQL: el AuthService los normaliza.
+- Django guarda fechas en UTC: todo el módulo opera en UTC (connectionTimeZone=UTC).
+- La respuesta correcta NUNCA viaja al frontend (PreguntaDTO la excluye).
+- El score final usa la misma fórmula renormalizada de Django:
+  (CV×0.25 + Examen×0.40 + Entrevista×0.35) / pesos_presentes.
