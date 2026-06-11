@@ -10,7 +10,6 @@ backend-django/**/staticfiles/
 *$py.class
 
 # MySQL
-*.sql
 *.dump
 
 # Node / React
@@ -61,3 +60,5 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+backend-django/.env
+*.env
