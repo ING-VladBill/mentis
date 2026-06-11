@@ -12,12 +12,9 @@ function Avatar({ nombre, apellidos }) {
   const colors = ['#7c3aed','#4f46e5','#0891b2','#059669','#d97706','#dc2626','#db2777'];
   const color = colors[((nombre?.charCodeAt(0) || 0) + (apellidos?.charCodeAt(0) || 0)) % colors.length];
   return (
-    <div style={{
-      width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-      background: `${color}22`, border: `1.5px solid ${color}44`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 13, fontWeight: 700, color,
-    }}>{n}{a}</div>
+    <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: `${color}22`, border: `1.5px solid ${color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color }}>
+      {n}{a}
+    </div>
   );
 }
 
@@ -31,76 +28,58 @@ const ROL_CFG = {
 function RolBadge({ rol }) {
   const cfg = ROL_CFG[rol] || ROL_CFG.reclutador;
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center',
-      padding: '3px 10px', borderRadius: 20,
-      fontSize: 12, fontWeight: 500,
-      background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
-    }}>{cfg.label}</span>
+    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+      {cfg.label}
+    </span>
   );
 }
 
 function ModalCrear({ t, onClose, onCreado }) {
-  const [form, setForm] = useState({ nombre: '', apellidos: '', email: '', password: '', rol: 'reclutador', area_responsable: '', telefono: '' });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState(null);
+  const [form, setForm]   = useState({ nombre: '', apellidos: '', email: '', password: '', rol: 'reclutador', area_responsable: '', telefono: '' });
+  const [saving, setSave] = useState(false);
+  const [error, setError] = useState(null);
 
-  const inp = {
-    width: '100%', boxSizing: 'border-box',
-    background: t.inputBg, border: `1px solid ${t.inputBorder}`,
-    borderRadius: 8, padding: '9px 12px',
-    fontSize: 13.5, color: t.text,
-    outline: 'none', fontFamily: 'inherit',
-  };
+  const inp = { width: '100%', boxSizing: 'border-box', background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 8, padding: '9px 12px', fontSize: 13.5, color: t.text, outline: 'none', fontFamily: 'inherit' };
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    setError(null);
-    setSaving(true);
+    e.preventDefault(); setError(null); setSave(true);
     try {
       const { data } = await api.post('/api/auth/usuarios/crear/', form);
-      toast.success(`Usuario ${data.nombre} creado. Se le envió un correo con sus credenciales.`);
-      onCreado(data);
-      onClose();
+      toast.success(`Usuario ${data.nombre} creado. Se envió correo con credenciales.`);
+      onCreado(data); onClose();
     } catch (err) {
       const d = err.response?.data;
       setError(d ? Object.entries(d).map(([k,v]) => `${k}: ${Array.isArray(v)?v.join(', '):v}`).join(' | ') : 'Error al crear.');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSave(false); }
   }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: '28px 26px', maxWidth: 480, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
         <div style={{ fontSize: 17, fontWeight: 700, color: t.text, marginBottom: 20 }}>Nuevo usuario</div>
-
-        {error && (
-          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, color: '#f87171', fontSize: 12.5 }}>{error}</div>
-        )}
-
+        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, color: '#f87171', fontSize: 12.5 }}>{error}</div>}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {[['nombre','Nombre *','Juan'],['apellidos','Apellidos *','García López']].map(([name, label, ph]) => (
+            {[['nombre','Nombre *','Juan'],['apellidos','Apellidos *','García']].map(([name,label,ph]) => (
               <div key={name}>
                 <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>{label}</label>
-                <input name={name} value={form[name]} onChange={e => setForm(p => ({...p, [e.target.name]: e.target.value}))} required style={inp} placeholder={ph} />
+                <input name={name} value={form[name]} onChange={e => setForm(p => ({...p,[e.target.name]:e.target.value}))} required style={inp} placeholder={ph} />
               </div>
             ))}
           </div>
           <div>
             <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Email *</label>
-            <input name="email" type="email" value={form.email} onChange={e => setForm(p => ({...p, email: e.target.value}))} required style={inp} placeholder="juan@empresa.com" />
+            <input type="email" value={form.email} onChange={e => setForm(p => ({...p,email:e.target.value}))} required style={inp} placeholder="juan@empresa.com" />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Contraseña temporal *</label>
-            <input name="password" type="password" value={form.password} onChange={e => setForm(p => ({...p, password: e.target.value}))} required style={inp} placeholder="Mínimo 8 caracteres" />
+            <input type="password" value={form.password} onChange={e => setForm(p => ({...p,password:e.target.value}))} required style={inp} placeholder="Mínimo 6 caracteres" />
             <div style={{ fontSize: 11, color: t.textFaint, marginTop: 4 }}>El sistema enviará un correo al usuario con sus credenciales.</div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Rol *</label>
-              <select name="rol" value={form.rol} onChange={e => setForm(p => ({...p, rol: e.target.value}))} style={{ ...inp, cursor: 'pointer' }}>
+              <select value={form.rol} onChange={e => setForm(p => ({...p,rol:e.target.value}))} style={{ ...inp, cursor: 'pointer' }}>
                 <option value="reclutador">Reclutador</option>
                 <option value="evaluador">Evaluador</option>
                 <option value="gerente">Gerente</option>
@@ -109,12 +88,12 @@ function ModalCrear({ t, onClose, onCreado }) {
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Teléfono</label>
-              <input name="telefono" value={form.telefono} onChange={e => setForm(p => ({...p, telefono: e.target.value}))} style={inp} placeholder="+51 999 999 999" />
+              <input value={form.telefono} onChange={e => setForm(p => ({...p,telefono:e.target.value}))} style={inp} placeholder="+51 999 999 999" />
             </div>
           </div>
           <div>
             <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Área responsable</label>
-            <input name="area_responsable" value={form.area_responsable} onChange={e => setForm(p => ({...p, area_responsable: e.target.value}))} style={inp} placeholder="Tecnología, Marketing, etc." />
+            <input value={form.area_responsable} onChange={e => setForm(p => ({...p,area_responsable:e.target.value}))} style={inp} placeholder="Tecnología, Marketing, etc." />
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
             <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 13.5, cursor: 'pointer' }}>Cancelar</button>
@@ -124,7 +103,52 @@ function ModalCrear({ t, onClose, onCreado }) {
             </button>
           </div>
         </form>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    </div>
+  );
+}
+
+function ModalPassword({ t, usuario, onClose }) {
+  const [pwd, setPwd]     = useState('');
+  const [saving, setSave] = useState(false);
+  const [error, setError] = useState(null);
+
+  const inp = { width: '100%', boxSizing: 'border-box', background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 8, padding: '9px 12px', fontSize: 13.5, color: t.text, outline: 'none', fontFamily: 'inherit' };
+
+  async function handleSubmit(e) {
+    e.preventDefault(); setError(null);
+    if (pwd.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); return; }
+    setSave(true);
+    try {
+      const { data } = await api.post(`/api/auth/usuarios/${usuario.id}/cambiar-password/`, { password_nuevo: pwd });
+      toast.success(data.mensaje || 'Contraseña actualizada.');
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error al cambiar la contraseña.');
+    } finally { setSave(false); }
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: '28px 26px', maxWidth: 400, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+        <div style={{ fontSize: 17, fontWeight: 700, color: t.text, marginBottom: 6 }}>Cambiar contraseña</div>
+        <div style={{ fontSize: 13, color: t.textMuted, marginBottom: 20 }}>
+          Nueva contraseña para <strong style={{ color: t.text }}>{usuario.nombre} {usuario.apellidos}</strong>
+        </div>
+        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, color: '#f87171', fontSize: 12.5 }}>{error}</div>}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Nueva contraseña *</label>
+            <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} required style={inp} placeholder="Mínimo 6 caracteres" autoFocus />
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 13.5, cursor: 'pointer' }}>Cancelar</button>
+            <button type="submit" disabled={saving} style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: saving ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: saving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+              {saving && <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />}
+              {saving ? 'Guardando...' : 'Cambiar contraseña'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -135,12 +159,13 @@ export default function Usuarios() {
   const { t } = useTheme();
   const usuarioActual = JSON.parse(localStorage.getItem('usuario') || '{}');
 
-  const [usuarios, setUsuarios] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(null);
-  const [showCrear, setCrear]   = useState(false);
-  const [confirm, setConfirm]   = useState(null);
-  const [confirmLoading, setCL] = useState(false);
+  const [usuarios, setUsuarios]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
+  const [showCrear, setCrear]       = useState(false);
+  const [modalPwd, setModalPwd]     = useState(null);
+  const [confirm, setConfirm]       = useState(null);
+  const [confirmLoad, setConfLoad]  = useState(false);
 
   useEffect(() => { cargar(); }, []);
 
@@ -149,18 +174,57 @@ export default function Usuarios() {
       setLoading(true);
       const { data } = await api.get('/api/auth/usuarios/');
       setUsuarios(data);
-    } catch {
-      setError('No se pudo cargar la lista de usuarios.');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError('No se pudo cargar la lista de usuarios.'); }
+    finally { setLoading(false); }
+  }
+
+  function pedirDesactivar(u) {
+    setConfirm({
+      tipo: 'warning',
+      icono: '⛔',
+      titulo: 'Desactivar usuario',
+      mensaje: `¿Desactivar a ${u.nombre} ${u.apellidos}? Perderá acceso al sistema inmediatamente. Puedes reactivarlo después.`,
+      labelOk: 'Desactivar',
+      onConfirm: async () => {
+        setConfLoad(true);
+        try {
+          const { data } = await api.post(`/api/auth/usuarios/${u.id}/desactivar/`);
+          setUsuarios(prev => prev.map(x => x.id === u.id ? data.usuario : x));
+          toast.success(data.mensaje);
+          setConfirm(null);
+        } catch (err) {
+          toast.error(err.response?.data?.error || 'Error al desactivar.');
+        } finally { setConfLoad(false); }
+      },
+    });
+  }
+
+  function pedirActivar(u) {
+    setConfirm({
+      tipo: 'success',
+      icono: '✅',
+      titulo: 'Activar usuario',
+      mensaje: `¿Reactivar a ${u.nombre} ${u.apellidos}? Podrá volver a iniciar sesión.`,
+      labelOk: 'Activar',
+      onConfirm: async () => {
+        setConfLoad(true);
+        try {
+          const { data } = await api.post(`/api/auth/usuarios/${u.id}/activar/`);
+          setUsuarios(prev => prev.map(x => x.id === u.id ? data.usuario : x));
+          toast.success(data.mensaje);
+          setConfirm(null);
+        } catch (err) {
+          toast.error(err.response?.data?.error || 'Error al activar.');
+        } finally { setConfLoad(false); }
+      },
+    });
   }
 
   const stats = {
-    total:      usuarios.length,
-    admins:     usuarios.filter(u => u.rol === 'admin').length,
-    reclutadores: usuarios.filter(u => u.rol === 'reclutador').length,
-    otros:      usuarios.filter(u => !['admin','reclutador'].includes(u.rol)).length,
+    total:       usuarios.length,
+    activos:     usuarios.filter(u => u.is_active).length,
+    inactivos:   usuarios.filter(u => !u.is_active).length,
+    admins:      usuarios.filter(u => u.rol === 'admin').length,
   };
 
   const card = { background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 12, transition: 'background 0.25s' };
@@ -182,17 +246,17 @@ export default function Usuarios() {
     <div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
-      {/* Modales */}
-      {showCrear && <ModalCrear t={t} onClose={() => setCrear(false)} onCreado={u => setUsuarios(prev => [...prev, u])} />}
-      {confirm && <ConfirmModal {...confirm} loading={confirmLoading} onClose={() => { if (!confirmLoading) setConfirm(null); }} />}
+      {showCrear  && <ModalCrear    t={t} onClose={() => setCrear(false)} onCreado={u => setUsuarios(p => [...p, u])} />}
+      {modalPwd   && <ModalPassword t={t} usuario={modalPwd} onClose={() => setModalPwd(null)} />}
+      {confirm    && <ConfirmModal  {...confirm} loading={confirmLoad} onClose={() => { if (!confirmLoad) setConfirm(null); }} />}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
         {[
-          { label: 'Total usuarios', value: stats.total,       icon: 'ti-users',        accent: '#7c3aed' },
-          { label: 'Administradores', value: stats.admins,     icon: 'ti-shield-check', accent: '#a78bfa' },
-          { label: 'Reclutadores',   value: stats.reclutadores,icon: 'ti-user-search',  accent: '#60a5fa' },
-          { label: 'Otros roles',    value: stats.otros,       icon: 'ti-users-group',  accent: '#34d399' },
+          { label: 'Total usuarios',  value: stats.total,     icon: 'ti-users',        accent: '#7c3aed' },
+          { label: 'Activos',         value: stats.activos,   icon: 'ti-circle-check', accent: '#10b981' },
+          { label: 'Inactivos',       value: stats.inactivos, icon: 'ti-circle-x',     accent: '#6b7280' },
+          { label: 'Administradores', value: stats.admins,    icon: 'ti-shield-check', accent: '#a78bfa' },
         ].map(({ label, value, icon, accent }) => (
           <div key={label} style={{ ...card, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 42, height: 42, borderRadius: 10, flexShrink: 0, background: `${accent}18`, border: `1px solid ${accent}28`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -206,7 +270,7 @@ export default function Usuarios() {
         ))}
       </div>
 
-      {/* Encabezado */}
+      {/* Botón nuevo */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
         <button onClick={() => setCrear(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 18px rgba(124,58,237,0.28)' }}>
           <i className="ti ti-user-plus" style={{ fontSize: 16 }} /> Nuevo usuario
@@ -227,95 +291,71 @@ export default function Usuarios() {
             {usuarios.map((u, i) => {
               const soyYo = u.email === usuarioActual.email;
               return (
-                <tr
-                  key={u.id}
-                  style={{ borderBottom: i < usuarios.length - 1 ? `1px solid ${t.cardBorder}` : 'none', transition: 'background 0.12s', opacity: u.is_active ? 1 : 0.5 }}
+                <tr key={u.id}
+                  style={{ borderBottom: i < usuarios.length - 1 ? `1px solid ${t.cardBorder}` : 'none', transition: 'background 0.12s', opacity: u.is_active ? 1 : 0.6 }}
                   onMouseEnter={e => e.currentTarget.style.background = t.rowHover}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  {/* Usuario */}
                   <td style={{ padding: '13px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <Avatar nombre={u.nombre} apellidos={u.apellidos} />
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>{u.nombre} {u.apellidos}</span>
                           {soyYo && <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(124,58,237,0.12)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.25)', padding: '1px 7px', borderRadius: 4 }}>Tú</span>}
-                          {!u.is_active && <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(107,114,128,0.12)', color: '#6b7280', border: '1px solid rgba(107,114,128,0.2)', padding: '1px 7px', borderRadius: 4 }}>Inactivo</span>}
+                          {!u.is_active && <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(107,114,128,0.1)', color: '#6b7280', border: '1px solid rgba(107,114,128,0.2)', padding: '1px 7px', borderRadius: 4 }}>Inactivo</span>}
                         </div>
                         {u.telefono && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>{u.telefono}</div>}
                       </div>
                     </div>
                   </td>
-
-                  {/* Email */}
                   <td style={{ padding: '13px 16px', fontSize: 13, color: t.textMuted }}>{u.email}</td>
-
-                  {/* Rol */}
                   <td style={{ padding: '13px 16px' }}><RolBadge rol={u.rol} /></td>
-
-                  {/* Área */}
                   <td style={{ padding: '13px 16px', fontSize: 13, color: t.textMuted }}>{u.area_responsable || '—'}</td>
-
-                  {/* Estado */}
                   <td style={{ padding: '13px 16px' }}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
-                      background: u.is_active ? 'rgba(52,211,153,0.1)' : 'rgba(107,114,128,0.1)',
-                      color: u.is_active ? '#34d399' : '#6b7280',
-                      border: u.is_active ? '1px solid rgba(52,211,153,0.2)' : '1px solid rgba(107,114,128,0.2)',
-                    }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500, background: u.is_active ? 'rgba(52,211,153,0.1)' : 'rgba(107,114,128,0.1)', color: u.is_active ? '#34d399' : '#6b7280', border: u.is_active ? '1px solid rgba(52,211,153,0.2)' : '1px solid rgba(107,114,128,0.2)' }}>
                       <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />
                       {u.is_active ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
-
-                  {/* Acciones */}
                   <td style={{ padding: '13px 16px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {/* Cambiar contraseña — pendiente de backend */}
-                      {!soyYo && (
+                    {!soyYo && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {/* Cambiar contraseña */}
                         <button
+                          onClick={() => setModalPwd(u)}
                           title="Cambiar contraseña"
-                          onClick={() => setConfirm({
-                            tipo: 'info',
-                            icono: '🔒',
-                            titulo: 'Función en desarrollo',
-                            mensaje: 'El endpoint de cambio de contraseña aún no está disponible en el backend. William debe agregar POST /api/auth/usuarios/{id}/cambiar-password/ para habilitar esta función.',
-                            labelOk: 'Entendido',
-                            labelCancel: null,
-                            onConfirm: () => setConfirm(null),
-                          })}
                           style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
                           onMouseEnter={e => { e.currentTarget.style.color = '#fbbf24'; e.currentTarget.style.borderColor = 'rgba(251,191,36,0.3)'; }}
                           onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}
                         >
                           <i className="ti ti-key" />
                         </button>
-                      )}
 
-                      {/* Desactivar/activar — pendiente de backend */}
-                      {!soyYo && (
-                        <button
-                          title={u.is_active ? 'Desactivar usuario' : 'Activar usuario'}
-                          onClick={() => setConfirm({
-                            tipo: 'info',
-                            icono: '⚙️',
-                            titulo: 'Función en desarrollo',
-                            mensaje: `El endpoint de ${u.is_active ? 'desactivación' : 'activación'} de usuarios aún no está disponible en el backend. William debe agregar POST /api/auth/usuarios/{id}/${u.is_active ? 'desactivar' : 'activar'}/ para habilitar esta función.`,
-                            labelOk: 'Entendido',
-                            labelCancel: null,
-                            onConfirm: () => setConfirm(null),
-                          })}
-                          style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
-                          onMouseEnter={e => { e.currentTarget.style.color = u.is_active ? '#f87171' : '#34d399'; e.currentTarget.style.borderColor = u.is_active ? 'rgba(239,68,68,0.3)' : 'rgba(52,211,153,0.3)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}
-                        >
-                          <i className={`ti ${u.is_active ? 'ti-user-off' : 'ti-user-check'}`} />
-                        </button>
-                      )}
-                    </div>
+                        {/* Desactivar / Activar */}
+                        {u.is_active ? (
+                          <button
+                            onClick={() => pedirDesactivar(u)}
+                            title="Desactivar usuario"
+                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid rgba(239,68,68,0.15)', background: 'rgba(239,68,68,0.07)', color: 'rgba(248,113,113,0.6)', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(239,68,68,0.15)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(248,113,113,0.6)'; e.currentTarget.style.background = 'rgba(239,68,68,0.07)'; }}
+                          >
+                            <i className="ti ti-user-off" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => pedirActivar(u)}
+                            title="Activar usuario"
+                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid rgba(52,211,153,0.2)', background: 'rgba(52,211,153,0.07)', color: 'rgba(52,211,153,0.6)', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#34d399'; e.currentTarget.style.background = 'rgba(52,211,153,0.15)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(52,211,153,0.6)'; e.currentTarget.style.background = 'rgba(52,211,153,0.07)'; }}
+                          >
+                            <i className="ti ti-user-check" />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               );
@@ -329,12 +369,6 @@ export default function Usuarios() {
             <div style={{ color: t.textMuted, fontSize: 14 }}>No hay usuarios registrados.</div>
           </div>
         )}
-      </div>
-
-      {/* Nota sobre endpoints pendientes */}
-      <div style={{ marginTop: 14, padding: '10px 16px', borderRadius: 8, background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', fontSize: 12.5, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <i className="ti ti-info-circle" style={{ fontSize: 15, flexShrink: 0 }} />
-        Los botones de cambiar contraseña y desactivar usuario estarán activos cuando William agregue los endpoints correspondientes al backend.
       </div>
     </div>
   );

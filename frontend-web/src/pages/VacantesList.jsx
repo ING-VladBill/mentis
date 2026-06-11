@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../App';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import ConfirmModal from '../components/ConfirmModal';
 
 const ESTADO_CFG = {
   abierta:    { color: '#34d399', bg: 'rgba(52,211,153,0.1)',   border: 'rgba(52,211,153,0.2)'   },
@@ -25,15 +26,16 @@ const NIVEL = {
 const MODAL = { presencial: 'Presencial', remoto: 'Remoto', hibrido: 'Híbrido' };
 
 export default function VacantesList() {
-  const { t } = useTheme();
+  const { t, dark } = useTheme();
   const navigate = useNavigate();
 
-  const [vacantes, setVacantes]   = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
-  const [filtro, setFiltro]       = useState('todas');
-  const [delId, setDelId]         = useState(null);
-  const [dupId, setDupId]         = useState(null);
+  const [vacantes, setVacantes] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+  const [filtro, setFiltro]     = useState('todas');
+  const [confirm, setConfirm]   = useState(null);
+  const [confirmLoad, setConfLoad] = useState(false);
+  const [dupId, setDupId]       = useState(null);
 
   useEffect(() => { load(); }, []);
 
@@ -49,18 +51,27 @@ export default function VacantesList() {
     }
   }
 
-  async function eliminar(id, titulo) {
-    if (!confirm(`¿Eliminar "${titulo}"?`)) return;
-    setDelId(id);
-    try {
-      await api.delete(`/api/vacantes/${id}/`);
-      setVacantes(v => v.filter(x => x.id !== id));
-      toast.success('Vacante eliminada.');
-    } catch {
-      toast.error('Error al eliminar.');
-    } finally {
-      setDelId(null);
-    }
+  function pedirEliminar(v) {
+    setConfirm({
+      tipo: 'danger',
+      icono: '🗑',
+      titulo: 'Eliminar vacante',
+      mensaje: `¿Eliminar "${v.titulo}"? Esta acción no se puede deshacer y se perderán todos los candidatos asociados.`,
+      labelOk: 'Eliminar',
+      onConfirm: async () => {
+        setConfLoad(true);
+        try {
+          await api.delete(`/api/vacantes/${v.id}/`);
+          setVacantes(prev => prev.filter(x => x.id !== v.id));
+          toast.success('Vacante eliminada.');
+          setConfirm(null);
+        } catch {
+          toast.error('Error al eliminar la vacante.');
+        } finally {
+          setConfLoad(false);
+        }
+      },
+    });
   }
 
   async function duplicar(id, titulo) {
@@ -90,6 +101,25 @@ export default function VacantesList() {
     borderRadius: 12, transition: 'background 0.25s, border-color 0.25s',
   };
 
+  // Estilos globales para selects en modo oscuro
+  const selectStyles = dark ? `
+    select option {
+      background: #1a1a24 !important;
+      color: #f0f0f0 !important;
+    }
+    select {
+      color-scheme: dark;
+    }
+  ` : `
+    select option {
+      background: #ffffff !important;
+      color: #111118 !important;
+    }
+    select {
+      color-scheme: light;
+    }
+  `;
+
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
       <div style={{ width: 32, height: 32, border: '2.5px solid rgba(124,58,237,0.3)', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -105,7 +135,15 @@ export default function VacantesList() {
 
   return (
     <div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} ${selectStyles}`}</style>
+
+      {confirm && (
+        <ConfirmModal
+          {...confirm}
+          loading={confirmLoad}
+          onClose={() => { if (!confirmLoad) setConfirm(null); }}
+        />
+      )}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
@@ -219,71 +257,46 @@ export default function VacantesList() {
                     <td style={{ padding: '14px 16px', fontSize: 13, color: t.textMuted, textAlign: 'center' }}>
                       {v.total_candidatos ?? '—'}
                     </td>
-
-                    {/* ── Posiciones (NUEVO) ── */}
                     <td style={{ padding: '14px 16px' }}>
                       {mostrarPosiciones ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>
-                            {v.posiciones_cubiertas ?? 0} / {v.cantidad_posiciones ?? 1}
-                          </span>
-                          {v.esta_completa && (
-                            <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', padding: '1px 7px', borderRadius: 4 }}>
-                              Completa
-                            </span>
-                          )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{v.posiciones_cubiertas ?? 0} / {v.cantidad_posiciones ?? 1}</span>
+                          {v.esta_completa && <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', padding: '1px 7px', borderRadius: 4, alignSelf: 'flex-start' }}>Completa</span>}
                         </div>
                       ) : (
                         <span style={{ fontSize: 12, color: t.textFaint }}>—</span>
                       )}
                     </td>
-
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                         {/* Ranking */}
-                        <button
-                          onClick={() => navigate(`/ranking?vacante_id=${v.id}`)}
-                          title="Ver ranking"
-                          style={{ padding: '5px 8px', borderRadius: 7, border: `1px solid rgba(245,158,11,0.2)`, background: 'rgba(245,158,11,0.07)', color: 'rgba(245,158,11,0.7)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s' }}
+                        <button onClick={() => navigate(`/ranking?vacante_id=${v.id}`)} title="Ver ranking"
+                          style={{ padding: '5px 8px', borderRadius: 7, border: '1px solid rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.07)', color: 'rgba(245,158,11,0.7)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
                           onMouseEnter={e => { e.currentTarget.style.color = '#f59e0b'; e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(245,158,11,0.7)'; e.currentTarget.style.background = 'rgba(245,158,11,0.07)'; }}
-                        >
+                          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(245,158,11,0.7)'; e.currentTarget.style.background = 'rgba(245,158,11,0.07)'; }}>
                           <i className="ti ti-trophy" style={{ fontSize: 13 }} />
                         </button>
-
-                        {/* Duplicar (NUEVO) */}
-                        <button
-                          onClick={() => duplicar(v.id, v.titulo)}
-                          disabled={dupId === v.id}
-                          title="Duplicar vacante"
-                          style={{ padding: '5px 8px', borderRadius: 7, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 12, cursor: dupId === v.id ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s' }}
+                        {/* Duplicar */}
+                        <button onClick={() => duplicar(v.id, v.titulo)} disabled={dupId === v.id} title="Duplicar"
+                          style={{ padding: '5px 8px', borderRadius: 7, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 12, cursor: dupId === v.id ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
                           onMouseEnter={e => { e.currentTarget.style.color = '#60a5fa'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.3)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}
-                        >
+                          onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}>
                           {dupId === v.id
                             ? <span style={{ width: 12, height: 12, border: '2px solid rgba(96,165,250,0.3)', borderTopColor: '#60a5fa', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
-                            : <i className="ti ti-copy" style={{ fontSize: 13 }} />
-                          }
+                            : <i className="ti ti-copy" style={{ fontSize: 13 }} />}
                         </button>
-
                         {/* Editar */}
-                        <button
-                          onClick={() => navigate(`/vacantes/${v.id}/editar`)}
+                        <button onClick={() => navigate(`/vacantes/${v.id}/editar`)}
                           style={{ padding: '5px 10px', borderRadius: 7, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s' }}
                           onMouseEnter={e => { e.currentTarget.style.color = t.text; e.currentTarget.style.background = t.inputBg; }}
-                          onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.background = t.toggleBg; }}
-                        >
+                          onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.background = t.toggleBg; }}>
                           <i className="ti ti-edit" style={{ fontSize: 13 }} /> Editar
                         </button>
-
-                        {/* Eliminar */}
-                        <button
-                          onClick={() => eliminar(v.id, v.titulo)}
-                          disabled={delId === v.id}
+                        {/* Eliminar — ahora usa ConfirmModal */}
+                        <button onClick={() => pedirEliminar(v)}
                           style={{ padding: '5px 8px', borderRadius: 7, border: '1px solid rgba(239,68,68,0.15)', background: 'rgba(239,68,68,0.07)', color: 'rgba(248,113,113,0.6)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
                           onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(239,68,68,0.15)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(248,113,113,0.6)'; e.currentTarget.style.background = 'rgba(239,68,68,0.07)'; }}
-                        >
+                          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(248,113,113,0.6)'; e.currentTarget.style.background = 'rgba(239,68,68,0.07)'; }}>
                           <i className="ti ti-trash" style={{ fontSize: 13 }} />
                         </button>
                       </div>
