@@ -1,15 +1,28 @@
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
+import {
+  BrowserRouter, Routes, Route, NavLink,
+  useLocation, useNavigate, Navigate,
+} from 'react-router-dom';
 import { useState, useEffect, createContext, useContext } from 'react';
-import VacantesList from './pages/VacantesList';
-import VacanteForm from './pages/VacanteForm';
-import CandidatoForm from './pages/CandidatoForm';
+import { Toaster } from 'react-hot-toast';
+
+import VacantesList   from './pages/VacantesList';
+import VacanteForm    from './pages/VacanteForm';
+import VacanteDetalle from './pages/VacanteDetalle';
+import CandidatoForm  from './pages/CandidatoForm';
 import CandidatosList from './pages/CandidatosList';
+import CandidatoDetalle from './pages/CandidatoDetalle';
+import Login          from './pages/Login';
+import Usuarios       from './pages/Usuarios';
+import Areas          from './pages/Areas';
+import Ranking        from './pages/Ranking';
+import CargaMasiva    from './pages/CargaMasiva';
+import ProtectedRoute from './components/ProtectedRoute';
+import api            from './services/api';
 
 // ─── Theme Context ────────────────────────────────────────────────────────────
 export const ThemeContext = createContext();
 export function useTheme() { return useContext(ThemeContext); }
 
-// ─── Theme tokens ─────────────────────────────────────────────────────────────
 function tokens(dark) {
   return dark ? {
     bg:           '#13131a',
@@ -55,11 +68,25 @@ function tokens(dark) {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 function Sidebar() {
   const { dark, toggle, t } = useTheme();
+  const navigate = useNavigate();
+
+  const usuario  = JSON.parse(localStorage.getItem('usuario') || '{}');
+  const nombre   = usuario.nombre || 'Usuario';
+  const rol      = usuario.rol_display || usuario.rol || 'RRHH';
+  const partes   = nombre.trim().split(' ');
+  const iniciales = partes.length >= 2
+    ? `${partes[0][0]}${partes[1][0]}`.toUpperCase()
+    : nombre.slice(0, 2).toUpperCase();
 
   const NAV_MAIN = [
-    { to: '/vacantes',   icon: 'ti-briefcase', label: 'Vacantes'   },
-    { to: '/candidatos', icon: 'ti-users',      label: 'Candidatos' },
+    { to: '/vacantes',    icon: 'ti-briefcase',    label: 'Vacantes'     },
+    { to: '/candidatos',  icon: 'ti-users',        label: 'Candidatos'   },
+    { to: '/ranking',     icon: 'ti-trophy',       label: 'Ranking'      },
+    { to: '/carga-masiva',icon: 'ti-files',        label: 'Carga masiva' },
+    { to: '/areas',       icon: 'ti-layout-grid',  label: 'Áreas'        },
+    { to: '/usuarios',    icon: 'ti-users-group',  label: 'Usuarios'     },
   ];
+
   const NAV_SOON = [
     { icon: 'ti-checklist',    label: 'Evaluaciones'   },
     { icon: 'ti-robot',        label: 'Entrevistas IA' },
@@ -67,6 +94,18 @@ function Sidebar() {
     { icon: 'ti-shield-check', label: 'Auditoría'      },
     { icon: 'ti-settings',     label: 'Configuración'  },
   ];
+
+  async function handleLogout() {
+    try {
+      const refresh = localStorage.getItem('refresh_token');
+      await api.post('/api/auth/logout/', { refresh });
+    } catch {
+      // Si falla el logout en el backend, igual limpiamos
+    } finally {
+      localStorage.clear();
+      navigate('/login');
+    }
+  }
 
   return (
     <aside style={{
@@ -80,7 +119,13 @@ function Sidebar() {
       {/* Logo */}
       <div style={{ padding: '22px 18px 18px', borderBottom: `1px solid ${t.sidebarBorder}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, background: 'linear-gradient(140deg,#7c3aed 10%,#4f46e5 90%)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}>
+          <div style={{
+            width: 36, height: 36,
+            background: 'linear-gradient(140deg,#7c3aed 10%,#4f46e5 90%)',
+            borderRadius: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 20px rgba(124,58,237,0.3)',
+          }}>
             <i className="ti ti-brain" style={{ fontSize: 18, color: '#fff' }} />
           </div>
           <div>
@@ -92,7 +137,7 @@ function Sidebar() {
 
       {/* Nav */}
       <nav style={{ padding: '14px 10px', flex: 1, overflowY: 'auto' }}>
-        <div style={{ fontSize: 10, color: t.textFaint, letterSpacing: '0.14em', padding: '6px 10px 8px', fontWeight: 600 }}>SPRINT 1</div>
+        <div style={{ fontSize: 10, color: t.textFaint, letterSpacing: '0.14em', padding: '6px 10px 8px', fontWeight: 600 }}>SPRINT 2</div>
         {NAV_MAIN.map(({ to, icon, label }) => (
           <NavLink key={to} to={to} style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: 10,
@@ -104,7 +149,12 @@ function Sidebar() {
             transition: 'all 0.15s', position: 'relative',
           })}>
             {({ isActive }) => (<>
-              {isActive && <div style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: 3, borderRadius: '0 3px 3px 0', background: '#7c3aed' }} />}
+              {isActive && (
+                <div style={{
+                  position: 'absolute', left: 0, top: '20%', bottom: '20%',
+                  width: 3, borderRadius: '0 3px 3px 0', background: '#7c3aed',
+                }} />
+              )}
               <i className={`ti ${icon}`} style={{ fontSize: 17 }} />
               {label}
             </>)}
@@ -113,7 +163,11 @@ function Sidebar() {
 
         <div style={{ fontSize: 10, color: t.textFaint, letterSpacing: '0.14em', padding: '18px 10px 8px', fontWeight: 600 }}>PRÓXIMOS SPRINTS</div>
         {NAV_SOON.map(({ icon, label }) => (
-          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, marginBottom: 2, fontSize: 13.5, color: t.textFaint, cursor: 'not-allowed' }}>
+          <div key={label} style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '8px 12px', borderRadius: 8, marginBottom: 2,
+            fontSize: 13.5, color: t.textFaint, cursor: 'not-allowed',
+          }}>
             <i className={`ti ${icon}`} style={{ fontSize: 17 }} />
             {label}
             <span style={{ marginLeft: 'auto', fontSize: 10, background: t.toggleBg, color: t.textFaint, padding: '2px 7px', borderRadius: 5 }}>Pronto</span>
@@ -121,30 +175,30 @@ function Sidebar() {
         ))}
       </nav>
 
-      {/* Sprint progress */}
-      <div style={{ padding: '10px 14px', margin: '0 10px 10px', borderRadius: 10, background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.18)' }}>
-        <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, marginBottom: 2 }}>Sprint 1 — Completado</div>
-        <div style={{ fontSize: 10.5, color: t.textFaint }}>Fundación del sistema</div>
+      {/* Sprint badge */}
+      <div style={{
+        padding: '10px 14px', margin: '0 10px 10px', borderRadius: 10,
+        background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.18)',
+      }}>
+        <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, marginBottom: 2 }}>Sprint 2 — En progreso</div>
+        <div style={{ fontSize: 10.5, color: t.textFaint }}>Autenticación + IA</div>
         <div style={{ marginTop: 8, background: t.toggleBg, borderRadius: 4, height: 4 }}>
-          <div style={{ width: '100%', height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,#7c3aed,#6d28d9)' }} />
+          <div style={{ width: '20%', height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,#7c3aed,#6d28d9)' }} />
         </div>
       </div>
 
       {/* Dark mode toggle */}
       <div style={{ padding: '10px 14px', borderTop: `1px solid ${t.sidebarBorder}` }}>
-        <button
-          onClick={toggle}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-            padding: '8px 12px', borderRadius: 9,
-            background: t.toggleBg, border: 'none',
-            cursor: 'pointer', fontSize: 13, color: t.textMuted,
-            transition: 'all 0.2s',
-          }}
-        >
+        <button onClick={toggle} style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+          padding: '8px 12px', borderRadius: 9,
+          background: t.toggleBg, border: 'none',
+          cursor: 'pointer', fontSize: 13, color: t.textMuted,
+          transition: 'all 0.2s',
+        }}>
           <span style={{ fontSize: 16 }}>{t.toggleIcon}</span>
           {dark ? 'Modo oscuro' : 'Modo claro'}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+          <div style={{ marginLeft: 'auto' }}>
             <div style={{
               width: 34, height: 18, borderRadius: 9,
               background: dark ? '#7c3aed' : 'rgba(0,0,0,0.15)',
@@ -162,13 +216,32 @@ function Sidebar() {
         </button>
       </div>
 
-      {/* User */}
-      <div style={{ padding: '12px 14px', borderTop: `1px solid ${t.sidebarBorder}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(124,58,237,0.15)', border: '1.5px solid rgba(124,58,237,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#a78bfa', flexShrink: 0 }}>GL</div>
+      {/* Usuario + logout */}
+      <div style={{
+        padding: '12px 14px',
+        borderTop: `1px solid ${t.sidebarBorder}`,
+        display: 'flex', alignItems: 'center', gap: 10,
+      }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+          background: 'rgba(124,58,237,0.15)',
+          border: '1.5px solid rgba(124,58,237,0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 11, fontWeight: 700, color: '#a78bfa',
+        }}>{iniciales}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 500, color: t.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Gabriel Llanos</div>
-          <div style={{ fontSize: 11, color: t.textFaint }}>Desarrollador Frontend</div>
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: t.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombre}</div>
+          <div style={{ fontSize: 11, color: t.textFaint, textTransform: 'capitalize' }}>{rol}</div>
         </div>
+        <button
+          onClick={handleLogout}
+          title="Cerrar sesión"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textFaint, padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+          onMouseLeave={e => e.currentTarget.style.color = t.textFaint}
+        >
+          <i className="ti ti-logout" style={{ fontSize: 16 }} />
+        </button>
       </div>
     </aside>
   );
@@ -190,13 +263,27 @@ function Topbar({ title, subtitle }) {
         <div style={{ fontSize: 15.5, fontWeight: 600, color: t.text }}>{title}</div>
         {subtitle && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>{subtitle}</div>}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: t.toggleBg, border: `1px solid ${t.cardBorder}`, borderRadius: 8, padding: '7px 13px', fontSize: 13, color: t.textFaint, cursor: 'text', minWidth: 210 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        background: t.toggleBg, border: `1px solid ${t.cardBorder}`,
+        borderRadius: 8, padding: '7px 13px',
+        fontSize: 13, color: t.textFaint, minWidth: 210,
+      }}>
         <i className="ti ti-search" style={{ fontSize: 14 }} />
         <span>Buscar vacantes, candidatos...</span>
       </div>
-      <div style={{ width: 34, height: 34, borderRadius: 8, background: t.toggleBg, border: `1px solid ${t.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: t.textMuted, position: 'relative' }}>
+      <div style={{
+        width: 34, height: 34, borderRadius: 8,
+        background: t.toggleBg, border: `1px solid ${t.cardBorder}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: t.textMuted, position: 'relative',
+      }}>
         <i className="ti ti-bell" style={{ fontSize: 16 }} />
-        <div style={{ position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: '50%', background: '#7c3aed', border: `1.5px solid ${t.topbar}` }} />
+        <div style={{
+          position: 'absolute', top: 7, right: 7,
+          width: 6, height: 6, borderRadius: '50%',
+          background: '#7c3aed', border: `1.5px solid ${t.topbar}`,
+        }} />
       </div>
     </header>
   );
@@ -204,33 +291,50 @@ function Topbar({ title, subtitle }) {
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 const PAGE_META = {
-  '/vacantes':              { title: 'Vacantes',          subtitle: 'Gestiona todos los puestos de trabajo' },
-  '/vacantes/nueva':        { title: 'Nueva vacante',     subtitle: 'Crear una nueva posición' },
-  '/candidatos':            { title: 'Candidatos',        subtitle: 'Listado de todos los postulantes' },
-  '/candidatos/registrar':  { title: 'Registrar candidato', subtitle: 'Agregar nuevo postulante' },
+  '/vacantes':             { title: 'Vacantes',            subtitle: 'Gestiona todos los puestos de trabajo' },
+  '/vacantes/nueva':       { title: 'Nueva vacante',       subtitle: 'Crear una nueva posición' },
+  '/candidatos':           { title: 'Candidatos',          subtitle: 'Listado de todos los postulantes' },
+  '/candidatos/registrar': { title: 'Registrar candidato', subtitle: 'Agregar nuevo postulante' },
+  '/ranking':              { title: 'Ranking',             subtitle: 'Comparativa de candidatos por vacante' },
+  '/carga-masiva':         { title: 'Carga masiva',        subtitle: 'Sube múltiples CVs en un solo lote' },
+  '/areas':                { title: 'Áreas',               subtitle: 'Gestión de áreas y etiquetas' },
+  '/usuarios':             { title: 'Usuarios',            subtitle: 'Equipo de recursos humanos' },
 };
 
 function Layout() {
   const { t } = useTheme();
   const location = useLocation();
-  const editMatch = location.pathname.match(/^\/vacantes\/(\d+)\/editar$/);
+  const editMatch  = location.pathname.match(/^\/vacantes\/(\d+)\/editar$/);
+  const detailMatch = location.pathname.match(/^\/candidatos\/(\d+)$/);
   const meta = editMatch
-    ? { title: 'Editar vacante', subtitle: `Modificando vacante #${editMatch[1]}` }
+    ? { title: 'Editar vacante',   subtitle: `Modificando vacante #${editMatch[1]}` }
+    : detailMatch
+    ? { title: 'Detalle candidato', subtitle: `Candidato #${detailMatch[1]}` }
     : (PAGE_META[location.pathname] || { title: 'MENTIS', subtitle: '' });
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: t.bg, color: t.text, fontFamily: 'system-ui,-apple-system,sans-serif', transition: 'background 0.25s, color 0.25s' }}>
+    <div style={{
+      display: 'flex', minHeight: '100vh',
+      background: t.bg, color: t.text,
+      fontFamily: 'system-ui,-apple-system,sans-serif',
+      transition: 'background 0.25s, color 0.25s',
+    }}>
       <Sidebar />
       <div style={{ flex: 1, marginLeft: 224, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Topbar title={meta.title} subtitle={meta.subtitle} />
         <main style={{ flex: 1, padding: '26px 28px' }}>
           <Routes>
-            <Route path="/"                       element={<VacantesList />} />
-            <Route path="/vacantes"               element={<VacantesList />} />
-            <Route path="/vacantes/nueva"         element={<VacanteForm />} />
-            <Route path="/vacantes/:id/editar"    element={<VacanteForm />} />
-            <Route path="/candidatos"             element={<CandidatosList />} />
-            <Route path="/candidatos/registrar"   element={<CandidatoForm />} />
+            <Route path="/vacantes"              element={<ProtectedRoute><VacantesList /></ProtectedRoute>} />
+            <Route path="/vacantes/nueva"        element={<ProtectedRoute><VacanteForm /></ProtectedRoute>} />
+            <Route path="/vacantes/:id"          element={<ProtectedRoute><VacanteDetalle /></ProtectedRoute>} />
+            <Route path="/vacantes/:id/editar"   element={<ProtectedRoute><VacanteForm /></ProtectedRoute>} />
+            <Route path="/candidatos"            element={<ProtectedRoute><CandidatosList /></ProtectedRoute>} />
+            <Route path="/candidatos/registrar"  element={<ProtectedRoute><CandidatoForm /></ProtectedRoute>} />
+            <Route path="/candidatos/:id"        element={<ProtectedRoute><CandidatoDetalle /></ProtectedRoute>} />
+            <Route path="/ranking"               element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+            <Route path="/carga-masiva"          element={<ProtectedRoute><CargaMasiva /></ProtectedRoute>} />
+            <Route path="/areas"                 element={<ProtectedRoute><Areas /></ProtectedRoute>} />
+            <Route path="/usuarios"              element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
           </Routes>
         </main>
       </div>
@@ -251,10 +355,62 @@ export default function App() {
 
   const t = tokens(dark);
 
+  // ─── Estilos globales para selects (fix modo oscuro/claro) ────────────────
+  const globalSelectStyles = `
+    select, select option {
+      background-color: ${dark ? '#1a1a24' : '#ffffff'} !important;
+      color: ${dark ? '#f0f0f0' : '#111118'} !important;
+    }
+    select {
+      color-scheme: ${dark ? 'dark' : 'light'};
+    }
+    select:focus {
+      outline: none;
+    }
+    * { box-sizing: border-box; }
+    @keyframes spin { to { transform: rotate(360deg) } }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
+    @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.4 } }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.15)'}; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: ${dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.25)'}; }
+  `;
+
   return (
     <ThemeContext.Provider value={{ dark, toggle: () => setDark(d => !d), t }}>
+      <style>{globalSelectStyles}</style>
       <BrowserRouter>
-        <Layout />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: dark ? '#1a1a24' : '#ffffff',
+              color:      dark ? '#f0f0f0' : '#111118',
+              border:     dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+              fontSize: 13,
+            },
+            success: { iconTheme: { primary: '#34d399', secondary: dark ? '#1a1a24' : '#fff' } },
+            error:   { iconTheme: { primary: '#f87171', secondary: dark ? '#1a1a24' : '#fff' } },
+          }}
+        />
+        <Routes>
+          {/* Ruta raíz */}
+          <Route
+            path="/"
+            element={
+              localStorage.getItem('access_token')
+                ? <Navigate to="/vacantes" replace />
+                : <Navigate to="/login" replace />
+            }
+          />
+          {/* Pública */}
+          <Route path="/login" element={<Login />} />
+          {/* Todo lo demás pasa por Layout */}
+          <Route path="/*" element={<Layout />} />
+        </Routes>
       </BrowserRouter>
     </ThemeContext.Provider>
   );

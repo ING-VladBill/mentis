@@ -1,9 +1,47 @@
-asgiref==3.11.1
+# ==========================================
+# MENTIS - requirements.txt (Sprint 2)
+# Backend Django completo
+# ==========================================
+
+# Core Django
 Django==4.2.16
-django-cors-headers==4.9.0
 djangorestframework==3.17.1
+drf-spectacular==0.27.2
+# Autenticación JWT
+djangorestframework-simplejwt==5.3.1
+
+# CORS
+django-cors-headers==4.9.0
+
+# Base de datos MySQL
 mysqlclient==2.2.8
-pillow==12.2.0
-python-dotenv==1.2.2
-sqlparse==0.5.5
-tzdata==2026.2
+
+# Variables de entorno
+python-dotenv==1.1.0
+
+# Archivos / imágenes
+Pillow==11.2.1
+
+# PDF: extracción de texto
+PyPDF2==3.0.1
+pdfminer.six==20231228  # fallback para PDFs complejos
+
+# IA Generativa (Google Gemini)
+google-generativeai==0.8.3
+
+# Correos HTML
+# (incluido en Django, solo necesitamos el motor SMTP)
+
+# Utilidades
+requests==2.32.3
+python-dateutil==2.9.0.post0
+
+# Tareas en background (para análisis IA asíncrono)
+celery==5.4.0
+django-celery-results==2.5.1
+redis==5.2.1  # broker para Celery
+
+# Testing
+pytest==8.3.5
+pytest-django==4.10.0
+factory-boy==3.3.3
