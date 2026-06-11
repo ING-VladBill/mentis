@@ -1,30 +1,29 @@
 from django.contrib import admin
-from evaluaciones.models import Examen, PreguntaExamen, RespuestaExamen, EntrevistaIA, PreguntaEntrevista
+from evaluaciones.models import Examen, PreguntaExamen, EventoAuditoria, EntrevistaIA
 
 
 class PreguntaExamenInline(admin.TabularInline):
     model = PreguntaExamen
     extra = 0
-    readonly_fields = ['categoria', 'tipo', 'enunciado', 'respuesta_correcta', 'puntos']
+    readonly_fields = ['orden', 'categoria', 'tipo', 'enunciado', 'puntos', 'puntos_obtenidos', 'es_correcta']
 
 
-class RespuestaExamenInline(admin.TabularInline):
-    model = RespuestaExamen
+class EventoAuditoriaInline(admin.TabularInline):
+    model = EventoAuditoria
     extra = 0
-    readonly_fields = ['pregunta', 'respuesta_seleccionada', 'respuesta_texto', 'puntaje', 'feedback_ia']
+    readonly_fields = ['tipo', 'detalle', 'timestamp']
 
 
 @admin.register(Examen)
 class ExamenAdmin(admin.ModelAdmin):
-    list_display  = ['candidato', 'vacante', 'estado', 'nota_obtenida', 'aprobado', 'fecha_generacion']
-    list_filter   = ['estado', 'aprobado']
-    inlines       = [PreguntaExamenInline]
-    readonly_fields = ['fecha_generacion', 'nota_obtenida', 'aprobado']
+    list_display    = ['candidato', 'vacante', 'estado', 'nota', 'aprobado', 'fecha_generacion']
+    list_filter     = ['estado', 'aprobado']
+    inlines         = [PreguntaExamenInline, EventoAuditoriaInline]
+    readonly_fields = ['fecha_generacion', 'fecha_inicio', 'fecha_fin', 'nota', 'aprobado']
 
 
 @admin.register(EntrevistaIA)
 class EntrevistaIAAdmin(admin.ModelAdmin):
-    list_display = ['candidato', 'estado', 'nota_final', 'modalidad', 'fecha_creacion']
-    list_filter  = ['estado', 'modalidad']
-    readonly_fields = ['nota_final', 'dim_claridad', 'dim_coherencia', 'dim_precision',
-                       'dim_comunicacion', 'dim_seguridad']
+    list_display  = ['candidato', 'estado', 'nota', 'fecha_inicio']
+    list_filter   = ['estado']
+    readonly_fields = ['nota', 'fecha_inicio', 'fecha_fin']
