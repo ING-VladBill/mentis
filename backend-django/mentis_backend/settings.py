@@ -210,6 +210,7 @@ MENTIS = {
     'NOTA_EXAMEN_MINIMA': 13,
     'TOP_CANDIDATOS_DEFAULT': 5,
     'FRONTEND_URL': os.getenv('FRONTEND_URL', 'http://localhost:5173'),
+    'NOMBRE_EMPRESA': os.getenv('NOMBRE_EMPRESA', 'MENTIS'),
 }
 
 # ------------------------------------------
