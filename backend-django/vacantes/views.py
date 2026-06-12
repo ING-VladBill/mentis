@@ -348,15 +348,18 @@ class VacanteViewSet(viewsets.ModelViewSet):
         Registrar esta URL en: https://indeed.com/publisher
         """
         from django.conf import settings as django_settings
-        vacantes = Vacante.objects.filter(estado='abierta', confidencial=False).select_related('area')
+        from usuarios.models import Empresa
+        vacantes       = Vacante.objects.filter(estado='abierta', confidencial=False).select_related('area')
         base_url       = django_settings.MENTIS['FRONTEND_URL']
-        nombre_empresa = django_settings.MENTIS.get('NOMBRE_EMPRESA', 'MENTIS')
+        empresa        = Empresa.get_instancia()
+        nombre_empresa = empresa.nombre
+        sitio_empresa  = empresa.sitio_web or base_url
 
         items_xml = ''
         for v in vacantes:
             salario = ''
             if v.mostrar_salario and v.salario_minimo and v.salario_maximo:
-                salario = f'<salary>{v.moneda} {v.salario_minimo:,.0f} - {v.salario_maximo:,.0f}</salary>'
+                salario = f'<salary>{v.moneda} {v.salario_minimo:,.0f} – {v.salario_maximo:,.0f}</salary>'
 
             items_xml += f'''
   <job>
@@ -376,13 +379,12 @@ class VacanteViewSet(viewsets.ModelViewSet):
         xml = f'''<?xml version="1.0" encoding="UTF-8"?>
 <source>
   <publisher>{nombre_empresa}</publisher>
-  <publisherurl>{base_url}</publisherurl>
+  <publisherurl>{sitio_empresa}</publisherurl>
   <lastBuildDate>{timezone.now().strftime('%a, %d %b %Y %H:%M:%S +0000')}</lastBuildDate>
 {items_xml}
 </source>'''
 
         return HttpResponse(xml, content_type='application/xml; charset=utf-8')
-
     # ------------------------------------------
     # CAMBIAR ESTADO
     # ------------------------------------------
