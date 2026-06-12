@@ -49,9 +49,9 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     is_active  = models.BooleanField(default=True)
     is_staff   = models.BooleanField(default=False)
 
-    fecha_creacion   = models.DateTimeField(auto_now_add=True)
+    fecha_creacion     = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
-    ultimo_login     = models.DateTimeField(null=True, blank=True)
+    ultimo_login       = models.DateTimeField(null=True, blank=True)
 
     objects = UsuarioManager()
 
@@ -59,10 +59,10 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['nombre', 'apellidos']
 
     class Meta:
-        db_table   = 'usuarios'
-        verbose_name = 'Usuario'
+        db_table            = 'usuarios'
+        verbose_name        = 'Usuario'
         verbose_name_plural = 'Usuarios'
-        ordering = ['apellidos', 'nombre']
+        ordering            = ['apellidos', 'nombre']
 
     def __str__(self):
         return f'{self.nombre} {self.apellidos} ({self.get_rol_display()})'
@@ -71,7 +71,6 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     def nombre_completo(self):
         return f'{self.nombre} {self.apellidos}'
 
-    # Helpers de permisos por rol
     @property
     def es_admin(self):
         return self.rol == 'admin'
@@ -94,24 +93,41 @@ class Empresa(models.Model):
     Configuración de la empresa (single-tenant para el MVP).
     Solo existe un registro en esta tabla.
     """
-    nombre        = models.CharField(max_length=200)
-    ruc           = models.CharField(max_length=11, blank=True)
-    logo          = models.ImageField(upload_to='empresa/', null=True, blank=True)
-    sector        = models.CharField(max_length=100, blank=True)
-    descripcion   = models.TextField(blank=True)
+    nombre      = models.CharField(max_length=200)
+    ruc         = models.CharField(max_length=11, blank=True)
+    logo        = models.ImageField(upload_to='empresa/', null=True, blank=True)
+    sector      = models.CharField(max_length=100, blank=True)
+    descripcion = models.TextField(blank=True)
 
-    # Configuración SMTP (override global si se quiere personalizar)
+    # ------------------------------------------
+    # PRESENCIA WEB (usados en feed Indeed y Google for Jobs)
+    # ------------------------------------------
+    sitio_web = models.URLField(
+        blank=True,
+        help_text='URL pública de la empresa. Ej: https://miempresa.com',
+    )
+    direccion = models.CharField(
+        max_length=300,
+        blank=True,
+        help_text='Dirección física. Ej: Av. Javier Prado 1234, San Isidro, Lima',
+    )
+
+    # ------------------------------------------
+    # CONFIGURACIÓN SMTP (override global)
+    # ------------------------------------------
     smtp_host     = models.CharField(max_length=200, blank=True)
     smtp_port     = models.IntegerField(default=587)
     smtp_usuario  = models.EmailField(blank=True)
     smtp_password = models.CharField(max_length=200, blank=True)
 
-    # Configuración del proceso de selección
-    score_cv_minimo      = models.IntegerField(default=60, help_text='Score mínimo CV para avanzar (0-100)')
-    nota_examen_minima   = models.DecimalField(max_digits=4, decimal_places=2, default=13.00)
-    top_finalistas       = models.IntegerField(default=5)
+    # ------------------------------------------
+    # CONFIGURACIÓN DEL PROCESO DE SELECCIÓN
+    # ------------------------------------------
+    score_cv_minimo    = models.IntegerField(default=60, help_text='Score mínimo CV para avanzar (0-100)')
+    nota_examen_minima = models.DecimalField(max_digits=4, decimal_places=2, default=13.00)
+    top_finalistas     = models.IntegerField(default=5)
 
-    fecha_creacion    = models.DateTimeField(auto_now_add=True)
+    fecha_creacion     = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
 
     class Meta:
