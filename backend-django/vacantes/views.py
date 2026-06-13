@@ -135,7 +135,8 @@ class VacanteViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(creado_por=self.request.user, estado='abierta')
+        # Las vacantes nacen en BORRADOR. RRHH las publica con el botón "Publicar".
+        serializer.save(creado_por=self.request.user, estado='borrador')
 
     def perform_update(self, serializer):
         instance = serializer.save()
@@ -385,6 +386,81 @@ class VacanteViewSet(viewsets.ModelViewSet):
 </source>'''
 
         return HttpResponse(xml, content_type='application/xml; charset=utf-8')
+    # ------------------------------------------
+    # PUBLICAR VACANTE (botón "Publicar")
+    # ------------------------------------------
+    @action(detail=True, methods=['post'], url_path='publicar')
+    def publicar(self, request, pk=None):
+        """
+        POST /api/vacantes/{id}/publicar/
+        Publica la vacante: la pasa a estado 'abierta', habilita su página
+        pública de postulación y la incluye en el feed de Indeed y en
+        Google for Jobs. Valida que tenga los datos mínimos.
+        """
+        vacante = self.get_object()
+
+        if vacante.estado == 'abierta':
+            return Response(
+                {'error': 'Esta vacante ya está publicada.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        validacion = vacante.puede_publicarse()
+        if not validacion['ok']:
+            return Response(
+                {'error': 'Faltan datos para publicar.', 'faltan': validacion['faltan']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ahora = timezone.now()
+        vacante.estado            = 'abierta'
+        vacante.fecha_publicacion = ahora
+        vacante.fecha_cierre      = None
+
+        publicado = dict(vacante.publicado_en or {})
+        publicado['sistema'] = ahora.isoformat()
+        vacante.publicado_en  = publicado
+
+        vacante.save(update_fields=['estado', 'fecha_publicacion', 'fecha_cierre', 'publicado_en'])
+
+        canales = vacante.canales_activos()
+        return Response({
+            'mensaje': 'Vacante publicada correctamente.',
+            'url_publica': vacante.get_url_formulario_publico(),
+            'canales': {
+                'formulario_publico': canales['formulario_publico'],
+                'indeed':             canales['indeed'],
+                'google_jobs':        canales['google_jobs'],
+            },
+            'vacante': VacanteDetalleSerializer(vacante).data,
+        })
+
+    # ------------------------------------------
+    # DESPUBLICAR VACANTE
+    # ------------------------------------------
+    @action(detail=True, methods=['post'], url_path='despublicar')
+    def despublicar(self, request, pk=None):
+        """
+        POST /api/vacantes/{id}/despublicar/
+        Despublica la vacante: la pasa a 'pausada' y la retira de la página
+        pública, del feed de Indeed y de Google for Jobs.
+        """
+        vacante = self.get_object()
+
+        if vacante.estado != 'abierta':
+            return Response(
+                {'error': f'Solo se pueden despublicar vacantes abiertas. Estado actual: {vacante.get_estado_display()}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        vacante.estado = 'pausada'
+        vacante.save(update_fields=['estado'])
+
+        return Response({
+            'mensaje': 'Vacante despublicada. Ya no es visible públicamente.',
+            'vacante': VacanteDetalleSerializer(vacante).data,
+        })
+
     # ------------------------------------------
     # CAMBIAR ESTADO
     # ------------------------------------------
