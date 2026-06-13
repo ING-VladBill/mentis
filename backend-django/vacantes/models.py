@@ -262,6 +262,15 @@ class Vacante(models.Model):
             'Si está vacío, el sistema genera los textos automáticamente.'
         ),
     )
+
+    publicado_en = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            'Registro de cuándo se publicó la vacante en cada canal. '
+            'Ej: {"sistema": "2026-06-12T10:00:00", "linkedin": "2026-06-12"}'
+        ),
+    )
  
     # ------------------------------------------
     # AUDITORÍA
@@ -319,6 +328,26 @@ class Vacante(models.Model):
     def esta_completa(self):
         return self.posiciones_cubiertas >= self.cantidad_posiciones
 
+    def puede_publicarse(self) -> dict:
+        """
+        Valida si la vacante tiene los datos mínimos para publicarse.
+        Devuelve {'ok': bool, 'faltan': [campos]}.
+        """
+        faltan = []
+        if not self.titulo:
+            faltan.append('título')
+        if not self.descripcion:
+            faltan.append('descripción')
+        if not self.requisitos:
+            faltan.append('requisitos')
+        if not self.area_id:
+            faltan.append('área')
+        if not self.ciudad:
+            faltan.append('ciudad')
+        if self.cantidad_posiciones < 1:
+            faltan.append('cantidad de posiciones')
+        return {'ok': len(faltan) == 0, 'faltan': faltan}
+
     def get_email_postulaciones(self):
         """Email único para recibir CVs de esta vacante por correo."""
         from django.conf import settings
@@ -353,18 +382,6 @@ class Vacante(models.Model):
             'google_jobs': True,
             'textos_publicacion': 'completo',
         }
-
-
-# ============================================================
-# REEMPLAZA el método generar_textos_publicacion() completo
-# en backend-django/vacantes/models.py
-#
-# Busca desde:
-#     def generar_textos_publicacion(self) -> dict:
-# Hasta (sin incluir):
-#     def schema_org(self) -> dict:
-# Y reemplaza todo ese bloque con lo de abajo.
-# ============================================================
 
     def generar_textos_publicacion(self) -> dict:
         """
