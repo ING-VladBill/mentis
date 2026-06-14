@@ -1,12 +1,12 @@
 # ==========================================
-# MENTIS - requirements.txt (Sprint 2)
-# Backend Django completo
+# MENTIS - requirements.txt (Producción)
 # ==========================================
 
 # Core Django
 Django==4.2.16
 djangorestframework==3.17.1
 drf-spectacular==0.27.2
+
 # Autenticación JWT
 djangorestframework-simplejwt==5.3.1
 
@@ -24,24 +24,15 @@ Pillow==11.2.1
 
 # PDF: extracción de texto
 PyPDF2==3.0.1
-pdfminer.six==20231228  # fallback para PDFs complejos
+pdfminer.six==20231228
 
 # IA Generativa (Google Gemini)
 google-generativeai==0.8.3
-
-# Correos HTML
-# (incluido en Django, solo necesitamos el motor SMTP)
 
 # Utilidades
 requests==2.32.3
 python-dateutil==2.9.0.post0
 
-# Tareas en background (para análisis IA asíncrono)
-celery==5.4.0
-django-celery-results==2.5.1
-redis==5.2.1  # broker para Celery
-
-# Testing
-pytest==8.3.5
-pytest-django==4.10.0
-factory-boy==3.3.3
+# ---- Producción ----
+gunicorn==23.0.0          # servidor WSGI de producción
+whitenoise==6.8.2         # sirve archivos estáticos
