@@ -289,12 +289,32 @@ def procesar_cv_individual(archivo_pdf, vacante_id: int, usuario_rrhh) -> dict:
         registrado_por    = usuario_rrhh,
     )
 
+    # Lanzar análisis con IA en segundo plano (no bloquea la carga masiva).
+    # Igual que el formulario público y el buzón IMAP.
+    import threading
+
+    def _analizar(candidato_id=candidato.id, vacante_id=vacante.id):
+        try:
+            from candidatos.models import Candidato as _C
+            from vacantes.models import Vacante as _V
+            from candidatos.servicios.correos import enviar_correo_avance_cv
+            c = _C.objects.get(id=candidato_id)
+            v = _V.objects.get(id=vacante_id)
+            resultado = analizar_cv(c, v)
+            if resultado.get('pasa_filtro'):
+                enviar_correo_avance_cv(c)
+        except Exception as e:
+            logger.error(f'Error analizando CV (carga masiva) candidato {candidato_id}: {e}')
+
+    threading.Thread(target=_analizar, daemon=True).start()
+
     return {
         'exito': True,
         'candidato_id': candidato.id,
         'nombre': candidato.nombre_completo,
         'email': email,
         'archivo': archivo_pdf.name,
+        'analizando': True,
     }
 
 
