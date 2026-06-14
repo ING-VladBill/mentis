@@ -252,6 +252,27 @@ class Vacante(models.Model):
     top_candidatos_finalistas = models.IntegerField(default=5)
 
     # ------------------------------------------
+    # TEXTOS DE PUBLICACIÓN EDITADOS
+    # ------------------------------------------
+    textos_editados = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            'Textos de publicación editados manualmente por RRHH. '
+            'Si está vacío, el sistema genera los textos automáticamente.'
+        ),
+    )
+
+    publicado_en = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            'Registro de cuándo se publicó la vacante en cada canal. '
+            'Ej: {"sistema": "2026-06-12T10:00:00", "linkedin": "2026-06-12"}'
+        ),
+    )
+ 
+    # ------------------------------------------
     # AUDITORÍA
     # ------------------------------------------
     creado_por         = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='vacantes_creadas')
@@ -307,6 +328,26 @@ class Vacante(models.Model):
     def esta_completa(self):
         return self.posiciones_cubiertas >= self.cantidad_posiciones
 
+    def puede_publicarse(self) -> dict:
+        """
+        Valida si la vacante tiene los datos mínimos para publicarse.
+        Devuelve {'ok': bool, 'faltan': [campos]}.
+        """
+        faltan = []
+        if not self.titulo:
+            faltan.append('título')
+        if not self.descripcion:
+            faltan.append('descripción')
+        if not self.requisitos:
+            faltan.append('requisitos')
+        if not self.area_id:
+            faltan.append('área')
+        if not self.ciudad:
+            faltan.append('ciudad')
+        if self.cantidad_posiciones < 1:
+            faltan.append('cantidad de posiciones')
+        return {'ok': len(faltan) == 0, 'faltan': faltan}
+
     def get_email_postulaciones(self):
         """Email único para recibir CVs de esta vacante por correo."""
         from django.conf import settings
@@ -344,88 +385,258 @@ class Vacante(models.Model):
 
     def generar_textos_publicacion(self) -> dict:
         """
-        Genera textos optimizados para publicar en distintos portales.
+        Genera textos ricos y completos para publicar en distintos portales.
+        Usa todos los campos disponibles de la vacante.
         Solo disponible si la vacante no es confidencial.
         """
         if self.confidencial:
             return {'error': 'Vacante confidencial. No se generan textos de publicación.'}
 
-        email     = self.get_email_postulaciones()
-        link      = self.get_url_formulario_publico()
-        salario   = ''
+        email = self.get_email_postulaciones()
+        link  = self.get_url_formulario_publico()
+
+        # ── Bloques reutilizables ─────────────────────────────────────
+
+        def _salario_str(simbolo='💰 '):
+            if self.mostrar_salario and self.salario_minimo and self.salario_maximo:
+                return f'\n{simbolo}Salario: {self.moneda} {self.salario_minimo:,.0f} – {self.salario_maximo:,.0f}'
+            return ''
+
+        def _lista_con_bullets(texto, bullet='• '):
+            """Convierte texto separado por comas o saltos de línea en lista con bullets."""
+            if not texto:
+                return ''
+            items = [i.strip() for i in texto.replace('\n', ',').split(',') if i.strip()]
+            return '\n'.join(f'{bullet}{i}' for i in items)
+
+        def _nivel_educativo_str():
+            partes = []
+            if self.nivel_educativo:
+                partes.append(self.nivel_educativo)
+            if self.carrera_afin:
+                partes.append(f'carrera afín a {self.carrera_afin}')
+            return ', '.join(partes) if partes else ''
+
+        def _experiencia_str():
+            nivel = self.get_nivel_experiencia_display()
+            if self.anios_experiencia:
+                return f'{nivel} ({self.anios_experiencia}+ años de experiencia)'
+            return nivel
+
+        def _fecha_limite_str(prefijo='📅 Fecha límite: '):
+            if self.fecha_limite:
+                return f'\n{prefijo}{self.fecha_limite.strftime("%d/%m/%Y")}'
+            return ''
+
+        def _modalidad_lugar():
+            partes = [self.get_modalidad_display(), self.ciudad]
+            if self.ubicacion:
+                partes.append(self.ubicacion)
+            return ' | '.join(p for p in partes if p)
+
+        # ── LINKEDIN ─────────────────────────────────────────────────
+        # Tono: profesional, narrativo, con emojis moderados.
+        # Estructura: hook → quiénes somos → qué harás → buscamos → beneficios → CTA
+
+        responsabilidades_li = _lista_con_bullets(self.responsabilidades, '✅ ') if self.responsabilidades else ''
+        tecnologias_li       = _lista_con_bullets(self.tecnologias, '🔧 ') if self.tecnologias else ''
+        beneficios_li        = _lista_con_bullets(self.beneficios, '🎁 ') if self.beneficios else ''
+        req_deseables_li     = _lista_con_bullets(self.requisitos_deseables, '⭐ ') if self.requisitos_deseables else ''
+
+        linkedin_secciones = []
+
+        # Hook + cabecera
+        linkedin_secciones.append(
+            f"🚀 ¡Estamos buscando {self.titulo}!\n\n"
+            f"📍 {_modalidad_lugar()} | 🏢 {self.area.nombre}\n"
+            f"📄 {self.get_tipo_contrato_display()} · {_experiencia_str()}"
+            f"{_salario_str()}"
+            f"{_fecha_limite_str()}"
+        )
+
+        # Descripción del puesto
+        if self.descripcion:
+            linkedin_secciones.append(f"Sobre el puesto:\n{self.descripcion}")
+
+        # Responsabilidades
+        if responsabilidades_li:
+            linkedin_secciones.append(f"¿Qué harás?\n{responsabilidades_li}")
+
+        # Requisitos obligatorios
+        req_li = _lista_con_bullets(self.requisitos, '✔️ ')
+        linkedin_secciones.append(f"Buscamos a alguien con:\n{req_li}")
+
+        # Educación y experiencia
+        edu = _nivel_educativo_str()
+        if edu:
+            linkedin_secciones.append(f"🎓 Formación: {edu}")
+
+        # Tecnologías / herramientas
+        if tecnologias_li:
+            linkedin_secciones.append(f"🛠 Tecnologías y herramientas:\n{tecnologias_li}")
+
+        # Requisitos deseables
+        if req_deseables_li:
+            linkedin_secciones.append(f"Será un plus si tienes:\n{req_deseables_li}")
+
+        # Horario
+        if self.horario:
+            linkedin_secciones.append(f"🕐 Horario: {self.horario} ({self.get_horario_tipo_display()})")
+
+        # Beneficios
+        if beneficios_li:
+            linkedin_secciones.append(f"¿Qué te ofrecemos?\n{beneficios_li}")
+
+        # CTA
+        tags_area = f"#{self.area.nombre.replace(' ', '').replace('/', '')}"
+        tags_nivel = f"#{self.get_nivel_experiencia_display().replace(' ', '').replace('(','').replace(')','').replace('+','').replace('-','')}"
+        linkedin_secciones.append(
+            f"📩 ¿Te interesa? Postula directamente aquí:\n🔗 {link}\n\n"
+            f"O envía tu CV a: {email}\n\n"
+            f"{tags_area} {tags_nivel} #Empleo #Peru #Lima #Oportunidad"
+        )
+
+        linkedin = '\n\n'.join(linkedin_secciones)
+
+        # ── COMPUTRABAJO ─────────────────────────────────────────────
+        # Tono: formal, estructurado. Sin emojis. Secciones en mayúsculas.
+        # Computrabajo favorece descripciones densas y completas.
+
+        ct_partes = [
+            f"PUESTO: {self.titulo}",
+            f"ÁREA: {self.area.nombre}",
+            f"NIVEL: {_experiencia_str()}",
+            f"MODALIDAD: {self.get_modalidad_display()}",
+            f"CIUDAD: {self.ciudad}{', ' + self.ubicacion if self.ubicacion else ''}",
+            f"CONTRATO: {self.get_tipo_contrato_display()}",
+        ]
+        if self.horario:
+            ct_partes.append(f"HORARIO: {self.horario} ({self.get_horario_tipo_display()})")
+        edu = _nivel_educativo_str()
+        if edu:
+            ct_partes.append(f"EDUCACIÓN REQUERIDA: {edu}")
         if self.mostrar_salario and self.salario_minimo and self.salario_maximo:
-            salario = f'\n💰 Salario: {self.moneda} {self.salario_minimo:,.0f} - {self.salario_maximo:,.0f}'
+            ct_partes.append(f"REMUNERACIÓN: {self.moneda} {self.salario_minimo:,.0f} – {self.salario_maximo:,.0f}")
+        if self.fecha_limite:
+            ct_partes.append(f"FECHA LÍMITE DE POSTULACIÓN: {self.fecha_limite.strftime('%d/%m/%Y')}")
 
-        linkedin = f"""🚀 ¡Estamos buscando {self.titulo}!
+        ct_partes.append(f"\nDESCRIPCIÓN DEL PUESTO:\n{self.descripcion}")
 
-📍 {self.get_modalidad_display()} | {self.ciudad}
-🏢 {self.area.nombre} | {self.get_nivel_experiencia_display()}
-📄 {self.get_tipo_contrato_display()}{salario}
+        if self.responsabilidades:
+            ct_partes.append(f"FUNCIONES Y RESPONSABILIDADES:\n{_lista_con_bullets(self.responsabilidades)}")
 
-✅ Requisitos clave:
-{self.requisitos[:300]}...
+        ct_partes.append(f"REQUISITOS OBLIGATORIOS:\n{_lista_con_bullets(self.requisitos)}")
 
-📩 Postula enviando tu CV a: {email}
-🔗 O directamente en: {link}
+        if self.requisitos_deseables:
+            ct_partes.append(f"REQUISITOS DESEABLES:\n{_lista_con_bullets(self.requisitos_deseables)}")
 
-#{self.area.nombre.replace(' ', '').replace('/', '')} #{self.get_nivel_experiencia_display().replace(' ', '').replace('(', '').replace(')', '').replace('+', '')} #Empleo #Lima #Peru"""
+        if self.habilidades:
+            ct_partes.append(f"HABILIDADES REQUERIDAS:\n{_lista_con_bullets(self.habilidades)}")
 
-        computrabajo = f"""PUESTO: {self.titulo}
-ÁREA: {self.area.nombre}
-NIVEL: {self.get_nivel_experiencia_display()}
-MODALIDAD: {self.get_modalidad_display()}
-CIUDAD: {self.ciudad}
-CONTRATO: {self.get_tipo_contrato_display()}{salario}
+        if self.tecnologias:
+            ct_partes.append(f"TECNOLOGÍAS / HERRAMIENTAS:\n{_lista_con_bullets(self.tecnologias)}")
 
-DESCRIPCIÓN DEL PUESTO:
-{self.descripcion[:500]}
+        ct_partes.append(
+            f"BENEFICIOS:\n{_lista_con_bullets(self.beneficios) if self.beneficios else '• A convenir'}"
+        )
+        ct_partes.append(
+            f"CÓMO POSTULAR:\n"
+            f"• Postula en línea: {link}\n"
+            f"• O envía tu CV a: {email}\n"
+            f"• Código de vacante: {self.codigo}"
+        )
 
-REQUISITOS OBLIGATORIOS:
-{self.requisitos}
+        computrabajo = '\n\n'.join(ct_partes)
 
-HABILIDADES REQUERIDAS:
-{self.habilidades}
+        # ── WHATSAPP ─────────────────────────────────────────────────
+        # Tono: directo, conciso. Máximo 3 pantallas de teléfono.
+        # Formato: texto plano con negritas (*texto*).
 
-BENEFICIOS:
-{self.beneficios or 'A convenir'}
+        wa_req = ', '.join(
+            [i.strip() for i in self.requisitos.replace('\n', ',').split(',') if i.strip()][:4]
+        )
+        wa_partes = [
+            f"*{self.titulo}* — {self.area.nombre}\n"
+            f"📍 {_modalidad_lugar()}\n"
+            f"📋 {self.get_tipo_contrato_display()}"
+            f"{_salario_str('💰 ')}",
 
-CÓMO POSTULAR:
-• Envía tu CV a: {email}
-• O postula en línea: {link}
-• Código de vacante: {self.codigo}"""
+            f"*¿Qué buscamos?*\n{wa_req}{'...' if len(self.requisitos) > len(wa_req) else ''}",
+        ]
 
-        whatsapp = f"""*{self.titulo}* — {self.area.nombre}
-📍 {self.ciudad} | {self.get_modalidad_display()}
-📋 {self.get_tipo_contrato_display()}{salario}
+        if self.tecnologias:
+            tec = ', '.join(
+                [i.strip() for i in self.tecnologias.replace('\n', ',').split(',') if i.strip()][:4]
+            )
+            wa_partes.append(f"*Tecnologías:* {tec}")
 
-Requisitos: {self.requisitos[:200]}...
+        if self.horario:
+            wa_partes.append(f"🕐 *Horario:* {self.horario}")
 
-Postula aquí 👇
-{link}
+        if self.beneficios:
+            ben = ', '.join(
+                [i.strip() for i in self.beneficios.replace('\n', ',').split(',') if i.strip()][:3]
+            )
+            wa_partes.append(f"🎁 *Beneficios:* {ben}")
 
-O envía tu CV a:
-{email}"""
+        if self.fecha_limite:
+            wa_partes.append(f"⏳ *Cierre:* {self.fecha_limite.strftime('%d/%m/%Y')}")
 
-        indeed = f"""{self.titulo}
+        wa_partes.append(
+            f"*Postula aquí 👇*\n{link}\n\nO envía tu CV a:\n{email}"
+        )
 
-{self.descripcion[:600]}
+        whatsapp = '\n\n'.join(wa_partes)
 
-Requisitos:
-{self.requisitos}
+        # ── INDEED (texto interno) ────────────────────────────────────
+        # Indeed usa este texto como descripción interna del job post.
+        # Tono: neutral, sin emojis, HTML básico permitido pero no necesario.
 
-Modalidad: {self.get_modalidad_display()}
-Ubicación: {self.ciudad}, {self.pais}
-Tipo: {self.get_tipo_contrato_display()}
+        indeed_partes = [
+            f"{self.titulo}\n{'=' * len(self.titulo)}",
+            f"Área: {self.area.nombre} | Nivel: {_experiencia_str()} | {self.get_modalidad_display()}",
+            self.descripcion,
+        ]
 
-Postula en: {link}"""
+        if self.responsabilidades:
+            indeed_partes.append(f"Responsabilidades:\n{_lista_con_bullets(self.responsabilidades, '- ')}")
+
+        indeed_partes.append(f"Requisitos:\n{_lista_con_bullets(self.requisitos, '- ')}")
+
+        if self.requisitos_deseables:
+            indeed_partes.append(f"Requisitos deseables:\n{_lista_con_bullets(self.requisitos_deseables, '- ')}")
+
+        if self.tecnologias:
+            indeed_partes.append(f"Tecnologías requeridas:\n{_lista_con_bullets(self.tecnologias, '- ')}")
+
+        edu = _nivel_educativo_str()
+        if edu:
+            indeed_partes.append(f"Formación académica: {edu}")
+
+        if self.horario:
+            indeed_partes.append(f"Horario: {self.horario} ({self.get_horario_tipo_display()})")
+
+        if self.mostrar_salario and self.salario_minimo and self.salario_maximo:
+            indeed_partes.append(f"Salario: {self.moneda} {self.salario_minimo:,.0f} – {self.salario_maximo:,.0f}")
+
+        if self.beneficios:
+            indeed_partes.append(f"Beneficios:\n{_lista_con_bullets(self.beneficios, '- ')}")
+
+        if self.fecha_limite:
+            indeed_partes.append(f"Fecha límite: {self.fecha_limite.strftime('%d/%m/%Y')}")
+
+        indeed_partes.append(f"Modalidad: {self.get_modalidad_display()}\nUbicación: {self.ciudad}, {self.pais}\nTipo de contrato: {self.get_tipo_contrato_display()}")
+        indeed_partes.append(f"Postula en: {link}")
+
+        indeed = '\n\n'.join(indeed_partes)
 
         return {
-            'linkedin':     linkedin,
-            'computrabajo': computrabajo,
-            'whatsapp':     whatsapp,
-            'indeed':       indeed,
+            'linkedin':            linkedin,
+            'computrabajo':        computrabajo,
+            'whatsapp':            whatsapp,
+            'indeed':              indeed,
             'email_postulaciones': email,
-            'link_formulario':    link,
+            'link_formulario':     link,
         }
 
     def schema_org(self) -> dict:

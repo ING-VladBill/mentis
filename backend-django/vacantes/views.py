@@ -135,7 +135,8 @@ class VacanteViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(creado_por=self.request.user, estado='abierta')
+        # Las vacantes nacen en BORRADOR. RRHH las publica con el botón "Publicar".
+        serializer.save(creado_por=self.request.user, estado='borrador')
 
     def perform_update(self, serializer):
         instance = serializer.save()
@@ -151,6 +152,7 @@ class VacanteViewSet(viewsets.ModelViewSet):
         """
         POST /api/vacantes/{id}/duplicar/
         Crea una copia de la vacante con estado borrador y nuevo código.
+        Los textos editados NO se copian (la copia genera los suyos propios).
         """
         original = self.get_object()
         nueva = Vacante.objects.create(
@@ -224,19 +226,103 @@ class VacanteViewSet(viewsets.ModelViewSet):
         })
 
     # ------------------------------------------
-    # GENERAR TEXTOS DE PUBLICACIÓN
+    # TEXTOS DE PUBLICACIÓN (GET + PATCH)
     # ------------------------------------------
-    @action(detail=True, methods=['get'], url_path='textos-publicacion')
+    @action(detail=True, methods=['get', 'patch'], url_path='textos-publicacion')
     def textos_publicacion(self, request, pk=None):
         """
-        GET /api/vacantes/{id}/textos-publicacion/
-        Genera textos optimizados para LinkedIn, Computrabajo, Indeed y WhatsApp.
+        GET  /api/vacantes/{id}/textos-publicacion/
+             Devuelve los textos editados si existen, o los genera automáticamente.
+             La respuesta incluye 'fuente': 'editado' | 'generado' para que el
+             frontend sepa si ya fue personalizado por RRHH.
+
+        PATCH /api/vacantes/{id}/textos-publicacion/
+             Guarda los textos editados por RRHH. Solo se guardan los canales
+             enviados en el body (linkedin, computrabajo, whatsapp, indeed).
+             Para resetear un canal al texto automático, envíalo con valor null.
+             Para resetear todos los canales, envía {"reset": true}.
+
+        Body de PATCH:
+            {
+                "linkedin":     "texto editado...",
+                "computrabajo": "texto editado...",
+                "whatsapp":     null,
+                "indeed":       "texto editado..."
+            }
         """
         vacante = self.get_object()
-        textos  = vacante.generar_textos_publicacion()
-        if 'error' in textos:
-            return Response(textos, status=status.HTTP_400_BAD_REQUEST)
-        return Response(textos)
+
+        if vacante.confidencial:
+            return Response(
+                {'error': 'Vacante confidencial. No se generan textos de publicación.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        CANALES_VALIDOS = {'linkedin', 'computrabajo', 'whatsapp', 'indeed'}
+
+        # ── GET ──────────────────────────────────────────────────
+        if request.method == 'GET':
+            automaticos = vacante.generar_textos_publicacion()
+            if 'error' in automaticos:
+                return Response(automaticos, status=status.HTTP_400_BAD_REQUEST)
+
+            editados = vacante.textos_editados or {}
+
+            textos = {}
+            for canal in CANALES_VALIDOS:
+                textos[canal] = editados.get(canal) or automaticos.get(canal, '')
+
+            return Response({
+                **textos,
+                'email_postulaciones': automaticos['email_postulaciones'],
+                'link_formulario':     automaticos['link_formulario'],
+                'fuente': {
+                    canal: ('editado' if editados.get(canal) else 'generado')
+                    for canal in CANALES_VALIDOS
+                },
+            })
+
+        # ── PATCH ─────────────────────────────────────────────────
+        if request.data.get('reset'):
+            vacante.textos_editados = {}
+            vacante.save(update_fields=['textos_editados'])
+            return Response({'mensaje': 'Textos reseteados. Se usarán los generados automáticamente.'})
+
+        editados = dict(vacante.textos_editados or {})
+        errores  = []
+
+        for canal, valor in request.data.items():
+            if canal not in CANALES_VALIDOS:
+                errores.append(f'Canal desconocido: "{canal}". Válidos: {sorted(CANALES_VALIDOS)}')
+                continue
+            if valor is None:
+                editados.pop(canal, None)
+            elif isinstance(valor, str) and valor.strip():
+                editados[canal] = valor.strip()
+            else:
+                errores.append(f'El valor de "{canal}" debe ser un texto no vacío o null para resetear.')
+
+        if errores:
+            return Response({'errores': errores}, status=status.HTTP_400_BAD_REQUEST)
+
+        vacante.textos_editados = editados
+        vacante.save(update_fields=['textos_editados'])
+
+        automaticos = vacante.generar_textos_publicacion()
+        textos = {}
+        for canal in CANALES_VALIDOS:
+            textos[canal] = editados.get(canal) or automaticos.get(canal, '')
+
+        return Response({
+            **textos,
+            'email_postulaciones': automaticos['email_postulaciones'],
+            'link_formulario':     automaticos['link_formulario'],
+            'fuente': {
+                canal: ('editado' if editados.get(canal) else 'generado')
+                for canal in CANALES_VALIDOS
+            },
+            'mensaje': 'Textos guardados correctamente.',
+        })
 
     # ------------------------------------------
     # SCHEMA.ORG PARA GOOGLE FOR JOBS
@@ -263,14 +349,18 @@ class VacanteViewSet(viewsets.ModelViewSet):
         Registrar esta URL en: https://indeed.com/publisher
         """
         from django.conf import settings as django_settings
-        vacantes = Vacante.objects.filter(estado='abierta', confidencial=False).select_related('area')
-        base_url = django_settings.MENTIS['FRONTEND_URL']
+        from usuarios.models import Empresa
+        vacantes       = Vacante.objects.filter(estado='abierta', confidencial=False).select_related('area')
+        base_url       = django_settings.MENTIS['FRONTEND_URL']
+        empresa        = Empresa.get_instancia()
+        nombre_empresa = empresa.nombre
+        sitio_empresa  = empresa.sitio_web or base_url
 
         items_xml = ''
         for v in vacantes:
             salario = ''
             if v.mostrar_salario and v.salario_minimo and v.salario_maximo:
-                salario = f'<salary>{v.moneda} {v.salario_minimo:,.0f} - {v.salario_maximo:,.0f}</salary>'
+                salario = f'<salary>{v.moneda} {v.salario_minimo:,.0f} – {v.salario_maximo:,.0f}</salary>'
 
             items_xml += f'''
   <job>
@@ -278,7 +368,7 @@ class VacanteViewSet(viewsets.ModelViewSet):
     <date>{(v.fecha_publicacion or v.fecha_creacion).strftime('%a, %d %b %Y %H:%M:%S +0000')}</date>
     <referencenumber>{v.codigo}</referencenumber>
     <url>{v.get_url_formulario_publico()}</url>
-    <company><![CDATA[Mi Empresa]]></company>
+    <company><![CDATA[{nombre_empresa}]]></company>
     <city>{v.ciudad}</city>
     <country>PE</country>
     <description><![CDATA[{v.descripcion}\n\nREQUISITOS:\n{v.requisitos}]]></description>
@@ -289,13 +379,87 @@ class VacanteViewSet(viewsets.ModelViewSet):
 
         xml = f'''<?xml version="1.0" encoding="UTF-8"?>
 <source>
-  <publisher>MENTIS</publisher>
-  <publisherurl>{base_url}</publisherurl>
+  <publisher>{nombre_empresa}</publisher>
+  <publisherurl>{sitio_empresa}</publisherurl>
   <lastBuildDate>{timezone.now().strftime('%a, %d %b %Y %H:%M:%S +0000')}</lastBuildDate>
 {items_xml}
 </source>'''
 
         return HttpResponse(xml, content_type='application/xml; charset=utf-8')
+    # ------------------------------------------
+    # PUBLICAR VACANTE (botón "Publicar")
+    # ------------------------------------------
+    @action(detail=True, methods=['post'], url_path='publicar')
+    def publicar(self, request, pk=None):
+        """
+        POST /api/vacantes/{id}/publicar/
+        Publica la vacante: la pasa a estado 'abierta', habilita su página
+        pública de postulación y la incluye en el feed de Indeed y en
+        Google for Jobs. Valida que tenga los datos mínimos.
+        """
+        vacante = self.get_object()
+
+        if vacante.estado == 'abierta':
+            return Response(
+                {'error': 'Esta vacante ya está publicada.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        validacion = vacante.puede_publicarse()
+        if not validacion['ok']:
+            return Response(
+                {'error': 'Faltan datos para publicar.', 'faltan': validacion['faltan']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ahora = timezone.now()
+        vacante.estado            = 'abierta'
+        vacante.fecha_publicacion = ahora
+        vacante.fecha_cierre      = None
+
+        publicado = dict(vacante.publicado_en or {})
+        publicado['sistema'] = ahora.isoformat()
+        vacante.publicado_en  = publicado
+
+        vacante.save(update_fields=['estado', 'fecha_publicacion', 'fecha_cierre', 'publicado_en'])
+
+        canales = vacante.canales_activos()
+        return Response({
+            'mensaje': 'Vacante publicada correctamente.',
+            'url_publica': vacante.get_url_formulario_publico(),
+            'canales': {
+                'formulario_publico': canales['formulario_publico'],
+                'indeed':             canales['indeed'],
+                'google_jobs':        canales['google_jobs'],
+            },
+            'vacante': VacanteDetalleSerializer(vacante).data,
+        })
+
+    # ------------------------------------------
+    # DESPUBLICAR VACANTE
+    # ------------------------------------------
+    @action(detail=True, methods=['post'], url_path='despublicar')
+    def despublicar(self, request, pk=None):
+        """
+        POST /api/vacantes/{id}/despublicar/
+        Despublica la vacante: la pasa a 'pausada' y la retira de la página
+        pública, del feed de Indeed y de Google for Jobs.
+        """
+        vacante = self.get_object()
+
+        if vacante.estado != 'abierta':
+            return Response(
+                {'error': f'Solo se pueden despublicar vacantes abiertas. Estado actual: {vacante.get_estado_display()}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        vacante.estado = 'pausada'
+        vacante.save(update_fields=['estado'])
+
+        return Response({
+            'mensaje': 'Vacante despublicada. Ya no es visible públicamente.',
+            'vacante': VacanteDetalleSerializer(vacante).data,
+        })
 
     # ------------------------------------------
     # CAMBIAR ESTADO
@@ -390,23 +554,23 @@ def formulario_publico_info(request, codigo):
         return Response({'error': 'Esta vacante ya cubrió todas sus posiciones.'}, status=status.HTTP_410_GONE)
 
     return Response({
-        'codigo':              vacante.codigo,
-        'titulo':              vacante.titulo,
-        'area':                vacante.area.nombre,
-        'nivel':               vacante.get_nivel_experiencia_display(),
-        'modalidad':           vacante.get_modalidad_display(),
-        'ciudad':              vacante.ciudad,
-        'tipo_contrato':       vacante.get_tipo_contrato_display(),
-        'horario':             vacante.horario,
-        'descripcion':         vacante.descripcion,
-        'requisitos':          vacante.requisitos,
+        'codigo':               vacante.codigo,
+        'titulo':               vacante.titulo,
+        'area':                 vacante.area.nombre,
+        'nivel':                vacante.get_nivel_experiencia_display(),
+        'modalidad':            vacante.get_modalidad_display(),
+        'ciudad':               vacante.ciudad,
+        'tipo_contrato':        vacante.get_tipo_contrato_display(),
+        'horario':              vacante.horario,
+        'descripcion':          vacante.descripcion,
+        'requisitos':           vacante.requisitos,
         'requisitos_deseables': vacante.requisitos_deseables,
-        'beneficios':          vacante.beneficios,
-        'mostrar_salario':     vacante.mostrar_salario,
-        'salario_minimo':      str(vacante.salario_minimo) if vacante.mostrar_salario else None,
-        'salario_maximo':      str(vacante.salario_maximo) if vacante.mostrar_salario else None,
-        'moneda':              vacante.moneda if vacante.mostrar_salario else None,
-        'schema_org':          vacante.schema_org(),
+        'beneficios':           vacante.beneficios,
+        'mostrar_salario':      vacante.mostrar_salario,
+        'salario_minimo':       str(vacante.salario_minimo) if vacante.mostrar_salario else None,
+        'salario_maximo':       str(vacante.salario_maximo) if vacante.mostrar_salario else None,
+        'moneda':               vacante.moneda if vacante.mostrar_salario else None,
+        'schema_org':           vacante.schema_org(),
     })
 
 
@@ -414,14 +578,13 @@ def formulario_publico_info(request, codigo):
 @permission_classes([AllowAny])
 def formulario_publico_postular(request, codigo):
     """
-    POST /api/postular/{codigo}/
+    POST /api/postular/{codigo}/enviar/
     El candidato sube su CV desde el formulario público.
     Crea el candidato automáticamente y lanza el análisis IA.
     """
     import threading
-    
     from candidatos.servicios.correos import enviar_correo_confirmacion_postulacion
-    
+
     try:
         vacante = Vacante.objects.get(codigo=codigo, estado='abierta')
     except Vacante.DoesNotExist:
@@ -433,7 +596,6 @@ def formulario_publico_postular(request, codigo):
     if vacante.esta_completa:
         return Response({'error': 'Esta vacante ya cubrió todas sus posiciones.'}, status=410)
 
-    # Validar datos requeridos
     nombre   = request.data.get('nombre', '').strip()
     apellido = request.data.get('apellido_paterno', '').strip()
     email    = request.data.get('email', '').strip()
@@ -449,12 +611,10 @@ def formulario_publico_postular(request, codigo):
     if Candidato.objects.filter(email=email, vacante=vacante).exists():
         return Response({'error': 'Ya existe una postulación con este email para esta vacante.'}, status=400)
 
-    # Extraer texto del PDF
     from candidatos.servicios.analisis_cv import extraer_texto_pdf
     texto_cv = extraer_texto_pdf(cv_file)
     cv_file.seek(0)
 
-    # Crear candidato
     candidato = Candidato.objects.create(
         vacante              = vacante,
         nombre               = nombre,
@@ -473,15 +633,13 @@ def formulario_publico_postular(request, codigo):
         source               = 'formulario',
         estado               = 'postulado',
     )
-    
-    # Correo de confirmación inmediato
+
     threading.Thread(
         target=enviar_correo_confirmacion_postulacion,
         args=(candidato,),
         daemon=True
-    ).start()    
-    
-    # Lanzar análisis IA en background
+    ).start()
+
     def _analizar():
         try:
             from candidatos.servicios.analisis_cv import analizar_cv

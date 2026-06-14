@@ -20,10 +20,11 @@ function Field({ label, required, hint, textMuted, children }) {
 const INITIAL = {
   vacante: '', nombre: '', apellido_paterno: '', apellido_materno: '',
   email: '', telefono: '', ciudad: '', linkedin: '',
-  pretension_salarial: '', // NUEVO
-  disponibilidad: '',      // NUEVO
+  pretension_salarial: '',
+  disponibilidad: '',
   nivel_educativo: '', carrera: '', anios_experiencia: 0,
   habilidades_declaradas: '',
+  analizar_al_crear: false, // NUEVO — checkbox "Analizar CV con IA al guardar"
 };
 
 export default function CandidatoForm() {
@@ -66,8 +67,8 @@ export default function CandidatoForm() {
   }, []);
 
   function handleChange(e) {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   }
 
   function handleFile(e) {
@@ -88,13 +89,19 @@ export default function CandidatoForm() {
 
     const fd = new FormData();
     Object.entries(form).forEach(([k, v]) => {
+      if (k === 'analizar_al_crear') return; // se agrega aparte como string
       if (v !== '' && v !== null && v !== undefined) fd.append(k, v);
     });
+    fd.append('analizar_al_crear', form.analizar_al_crear ? 'true' : 'false');
     fd.append('cv', cvFile);
 
     try {
       await api.post('/api/candidatos/', fd, { headers: { 'Content-Type': undefined } });
-      toast.success('Candidato registrado correctamente.');
+      if (form.analizar_al_crear) {
+        toast.success('Candidato registrado. Analizando CV con IA — el score aparecerá en unos segundos.');
+      } else {
+        toast.success('Candidato registrado correctamente.');
+      }
       navigate('/candidatos');
     } catch (err) {
       const d = err.response?.data;
@@ -248,6 +255,33 @@ export default function CandidatoForm() {
               )}
             </div>
           </Field>
+        </div>
+
+        {/* ── Análisis IA (NUEVO) ── */}
+        <div style={section}>
+          <div style={sTitle}><i className="ti ti-robot" style={{ fontSize: 14 }} /> Análisis con inteligencia artificial</div>
+          <label style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10,
+            cursor: 'pointer', userSelect: 'none',
+          }}>
+            <input
+              type="checkbox"
+              name="analizar_al_crear"
+              checked={form.analizar_al_crear}
+              onChange={handleChange}
+              style={{ width: 16, height: 16, marginTop: 2, accentColor: '#7c3aed', cursor: 'pointer', flexShrink: 0 }}
+            />
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 500, color: t.text }}>
+                Analizar CV con IA al guardar
+              </div>
+              <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 3, lineHeight: 1.5 }}>
+                Si lo activas, el sistema analizará el CV automáticamente en segundo plano y el candidato
+                aparecerá con su score en unos segundos. Si lo dejas desactivado, podrás analizarlo
+                después desde el botón "Analizar IA" en la lista de candidatos.
+              </div>
+            </div>
+          </label>
         </div>
 
         {/* Acciones */}

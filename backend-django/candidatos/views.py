@@ -124,6 +124,25 @@ class CandidatoViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 logger.warning(f'No se pudo extraer texto del CV: {e}')
 
+        # Si RRHH marcó "analizar al crear", se dispara el análisis IA en background.
+        # Por defecto NO se analiza (registro unitario manual da control a RRHH).
+        analizar_flag = str(self.request.data.get('analizar_al_crear', '')).lower() in ('true', '1', 'yes')
+        if analizar_flag and candidato.cv_texto_extraido:
+            import threading
+
+            def _analizar(candidato_id=candidato.id):
+                try:
+                    from candidatos.models import Candidato as _C
+                    from candidatos.servicios.correos import enviar_correo_avance_cv
+                    c = _C.objects.get(id=candidato_id)
+                    resultado = analizar_cv(c, c.vacante)
+                    if resultado.get('pasa_filtro'):
+                        enviar_correo_avance_cv(c)
+                except Exception as e:
+                    logger.error(f'Error analizando CV (registro unitario) candidato {candidato_id}: {e}')
+
+            threading.Thread(target=_analizar, daemon=True).start()
+
     # ------------------------------------------
     # ANALIZAR CV CON IA
     # ------------------------------------------
