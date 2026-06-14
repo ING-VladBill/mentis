@@ -82,8 +82,20 @@ export default function VacanteForm() {
     try {
       setLoad(true);
       const { data } = await api.get(`/api/vacantes/${id}/`);
+
+      // Vacantes antiguas (creadas antes de los campos RRHH de Sprint 2) pueden
+      // tener choices guardados como "" en BD. Los <select> no tienen opción
+      // vacía, así que reemplazamos "" por el valor por defecto de INITIAL
+      // para evitar guardar/publicar con un valor inválido.
+      const merged = { ...INITIAL, ...data };
+      Object.keys(INITIAL).forEach(key => {
+        if (merged[key] === '' && typeof INITIAL[key] === 'string' && INITIAL[key] !== '') {
+          merged[key] = INITIAL[key];
+        }
+      });
+
       setForm({
-        ...INITIAL, ...data,
+        ...merged,
         area: data.area?.id || data.area || '',
         salario_minimo: data.salario_minimo ?? '',
         salario_maximo: data.salario_maximo ?? '',
