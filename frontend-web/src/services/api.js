@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: 'https://mentis-production-6ed9.up.railway.app',
   headers: { 'Content-Type': 'application/json' },
 });
 
