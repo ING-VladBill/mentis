@@ -22,6 +22,9 @@ public class EventoAuditoria {
     /** perdida_foco | cambio_ventana | copy_paste | click_derecho | devtools | inactividad | otro */
     private String tipo;
 
+    /** baja | media | alta — nivel de riesgo para el dashboard de RRHH */
+    private String severidad;
+
     @Column(columnDefinition = "longtext")
     private String detalle;
 

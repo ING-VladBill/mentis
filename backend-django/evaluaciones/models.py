@@ -85,6 +85,19 @@ class EventoAuditoria(models.Model):
 
     examen    = models.ForeignKey(Examen, on_delete=models.CASCADE, related_name='eventos')
     tipo      = models.CharField(max_length=20, choices=TIPO_CHOICES, default='otro')
+    
+    SEVERIDAD_CHOICES = [
+        ('baja',  'Baja'),
+        ('media', 'Media'),
+        ('alta',  'Alta'),
+    ]
+    severidad = models.CharField(
+        max_length=10,
+        choices=SEVERIDAD_CHOICES,
+        default='baja',
+        help_text='Nivel de riesgo del evento para el dashboard verde/amarillo/rojo.',
+    )    
+    
     detalle   = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 

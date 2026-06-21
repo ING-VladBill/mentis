@@ -11,7 +11,7 @@ class PreguntaExamenInline(admin.TabularInline):
 class EventoAuditoriaInline(admin.TabularInline):
     model = EventoAuditoria
     extra = 0
-    readonly_fields = ['tipo', 'detalle', 'timestamp']
+    readonly_fields = ['tipo', 'severidad', 'detalle', 'timestamp']
 
 
 @admin.register(Examen)
