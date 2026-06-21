@@ -53,7 +53,11 @@ urlpatterns = [
     # ------------------------------------------
     path('api/postular/<str:codigo>/',         formulario_publico_info,     name='postular-info'),
     path('api/postular/<str:codigo>/enviar/',  formulario_publico_postular, name='postular-enviar'),
-
+    
+    # ------------------------------------------
+    # Lista y detalle de exámenes técnicos (gestionados por Spring Boot, pero Django es el dueño del esquema)
+    # ------------------------------------------
+    path('api/evaluaciones/', include('evaluaciones.urls')),
     # ------------------------------------------
     # API REST (router)
     # ------------------------------------------

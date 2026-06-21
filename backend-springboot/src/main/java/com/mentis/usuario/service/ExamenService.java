@@ -25,6 +25,18 @@ public class ExamenService {
     private static final Logger log = LoggerFactory.getLogger(ExamenService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    /** Severidad de cada tipo de evento de auditoría (para el semáforo de RRHH). */
+    private static final Map<String, String> SEVERIDAD_EVENTO = Map.of(
+            "perdida_foco",      "media",
+            "cambio_ventana",    "alta",
+            "copy_paste",        "alta",
+            "click_derecho",     "baja",
+            "devtools",          "alta",
+            "inactividad",       "baja",
+            "pantalla_dividida", "alta",
+            "otro",              "baja"
+    );
+
     private final ExamenRepository examenRepo;
     private final PreguntaExamenRepository preguntaRepo;
     private final CandidatoRepository candidatoRepo;
@@ -227,14 +239,21 @@ public class ExamenService {
         Examen examen = examenRepo.findByCandidatoId(candidatoId)
                 .orElseThrow(() -> ApiException.notFound("No tienes un examen activo."));
 
+        String severidad = SEVERIDAD_EVENTO.getOrDefault(tipo, "baja");
+
         EventoAuditoria e = new EventoAuditoria();
         e.setExamen(examen);
         e.setTipo(tipo);
+        e.setSeveridad(severidad);
         e.setDetalle(detalle != null ? detalle : "");
         e.setTimestamp(ahora());
         eventoRepo.save(e);
 
-        return Map.of("registrado", true, "total_eventos", eventoRepo.countByExamenId(examen.getId()));
+        return Map.of(
+                "registrado", true,
+                "severidad", severidad,
+                "total_eventos", eventoRepo.countByExamenId(examen.getId())
+        );
     }
 
     // ==========================================
