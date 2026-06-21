@@ -16,6 +16,7 @@ import Usuarios       from './pages/Usuarios';
 import Areas          from './pages/Areas';
 import Ranking        from './pages/Ranking';
 import CargaMasiva    from './pages/CargaMasiva';
+import Postular       from './pages/Postular';
 import ProtectedRoute from './components/ProtectedRoute';
 import api            from './services/api';
 
@@ -408,6 +409,7 @@ export default function App() {
           />
           {/* Pública */}
           <Route path="/login" element={<Login />} />
+          <Route path="/postular/:codigo" element={<Postular />} />
           {/* Todo lo demás pasa por Layout */}
           <Route path="/*" element={<Layout />} />
         </Routes>
