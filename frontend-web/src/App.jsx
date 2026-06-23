@@ -17,6 +17,14 @@ import Areas          from './pages/Areas';
 import Ranking        from './pages/Ranking';
 import CargaMasiva    from './pages/CargaMasiva';
 import Postular       from './pages/Postular';
+import Evaluaciones   from './pages/Evaluaciones';
+import ExamenDetalle  from './pages/ExamenDetalle';
+import AccesoCandidato      from './pages/candidato/Acceso';
+import ExamenInstrucciones  from './pages/candidato/ExamenInstrucciones';
+import Examen               from './pages/candidato/Examen';
+import ExamenFinalizado     from './pages/candidato/ExamenFinalizado';
+import Progreso             from './pages/candidato/Progreso';
+import SesionExpirada       from './pages/candidato/SesionExpirada';
 import ProtectedRoute from './components/ProtectedRoute';
 import api            from './services/api';
 
@@ -80,16 +88,16 @@ function Sidebar() {
     : nombre.slice(0, 2).toUpperCase();
 
   const NAV_MAIN = [
-    { to: '/vacantes',    icon: 'ti-briefcase',    label: 'Vacantes'     },
-    { to: '/candidatos',  icon: 'ti-users',        label: 'Candidatos'   },
-    { to: '/ranking',     icon: 'ti-trophy',       label: 'Ranking'      },
-    { to: '/carga-masiva',icon: 'ti-files',        label: 'Carga masiva' },
-    { to: '/areas',       icon: 'ti-layout-grid',  label: 'Áreas'        },
-    { to: '/usuarios',    icon: 'ti-users-group',  label: 'Usuarios'     },
+    { to: '/vacantes',     icon: 'ti-briefcase',    label: 'Vacantes'     },
+    { to: '/candidatos',   icon: 'ti-users',        label: 'Candidatos'   },
+    { to: '/evaluaciones', icon: 'ti-clipboard-list', label: 'Evaluaciones' },
+    { to: '/ranking',      icon: 'ti-trophy',       label: 'Ranking'      },
+    { to: '/carga-masiva', icon: 'ti-files',        label: 'Carga masiva' },
+    { to: '/areas',        icon: 'ti-layout-grid',  label: 'Áreas'        },
+    { to: '/usuarios',     icon: 'ti-users-group',  label: 'Usuarios'     },
   ];
 
   const NAV_SOON = [
-    { icon: 'ti-checklist',    label: 'Evaluaciones'   },
     { icon: 'ti-robot',        label: 'Entrevistas IA' },
     { icon: 'ti-chart-bar',    label: 'Resultados'     },
     { icon: 'ti-shield-check', label: 'Auditoría'      },
@@ -296,7 +304,7 @@ const PAGE_META = {
   '/vacantes/nueva':       { title: 'Nueva vacante',       subtitle: 'Crear una nueva posición' },
   '/candidatos':           { title: 'Candidatos',          subtitle: 'Listado de todos los postulantes' },
   '/candidatos/registrar': { title: 'Registrar candidato', subtitle: 'Agregar nuevo postulante' },
-  '/ranking':              { title: 'Ranking',             subtitle: 'Comparativa de candidatos por vacante' },
+  '/evaluaciones':         { title: 'Evaluaciones',        subtitle: 'Exámenes técnicos de candidatos' },
   '/carga-masiva':         { title: 'Carga masiva',        subtitle: 'Sube múltiples CVs en un solo lote' },
   '/areas':                { title: 'Áreas',               subtitle: 'Gestión de áreas y etiquetas' },
   '/usuarios':             { title: 'Usuarios',            subtitle: 'Equipo de recursos humanos' },
@@ -305,12 +313,18 @@ const PAGE_META = {
 function Layout() {
   const { t } = useTheme();
   const location = useLocation();
-  const editMatch  = location.pathname.match(/^\/vacantes\/(\d+)\/editar$/);
+  const editMatch   = location.pathname.match(/^\/vacantes\/(\d+)\/editar$/);
+  const vacMatch    = location.pathname.match(/^\/vacantes\/(\d+)$/);
   const detailMatch = location.pathname.match(/^\/candidatos\/(\d+)$/);
+  const evalMatch   = location.pathname.match(/^\/evaluaciones\/(\d+)$/);
   const meta = editMatch
-    ? { title: 'Editar vacante',   subtitle: `Modificando vacante #${editMatch[1]}` }
+    ? { title: 'Editar vacante',     subtitle: `Modificando vacante #${editMatch[1]}` }
+    : vacMatch
+    ? { title: 'Detalle de vacante', subtitle: `Vacante #${vacMatch[1]}` }
     : detailMatch
-    ? { title: 'Detalle candidato', subtitle: `Candidato #${detailMatch[1]}` }
+    ? { title: 'Detalle candidato',  subtitle: `Candidato #${detailMatch[1]}` }
+    : evalMatch
+    ? { title: 'Detalle de examen',  subtitle: `Examen #${evalMatch[1]}` }
     : (PAGE_META[location.pathname] || { title: 'MENTIS', subtitle: '' });
 
   return (
@@ -333,6 +347,8 @@ function Layout() {
             <Route path="/candidatos/registrar"  element={<ProtectedRoute><CandidatoForm /></ProtectedRoute>} />
             <Route path="/candidatos/:id"        element={<ProtectedRoute><CandidatoDetalle /></ProtectedRoute>} />
             <Route path="/ranking"               element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+            <Route path="/evaluaciones"          element={<ProtectedRoute><Evaluaciones /></ProtectedRoute>} />
+            <Route path="/evaluaciones/:id"      element={<ProtectedRoute><ExamenDetalle /></ProtectedRoute>} />
             <Route path="/carga-masiva"          element={<ProtectedRoute><CargaMasiva /></ProtectedRoute>} />
             <Route path="/areas"                 element={<ProtectedRoute><Areas /></ProtectedRoute>} />
             <Route path="/usuarios"              element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
@@ -340,6 +356,20 @@ function Layout() {
         </main>
       </div>
     </div>
+  );
+}
+
+// ─── Portal del candidato (rutas /candidato/*) ────────────────────────────────
+function PortalCandidato() {
+  return (
+    <Routes>
+      <Route path="acceso"       element={<AccesoCandidato />} />
+      <Route path="instrucciones" element={<ExamenInstrucciones />} />
+      <Route path="examen"       element={<Examen />} />
+      <Route path="finalizado"   element={<ExamenFinalizado />} />
+      <Route path="progreso"     element={<Progreso />} />
+      <Route path="expirado"     element={<SesionExpirada />} />
+    </Routes>
   );
 }
 
@@ -408,8 +438,10 @@ export default function App() {
             }
           />
           {/* Pública */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/postular/:codigo" element={<Postular />} />
+          <Route path="/login"                   element={<Login />} />
+          <Route path="/postular/:codigo"        element={<Postular />} />
+          {/* Portal candidato — Spring Boot, sin login de RRHH */}
+          <Route path="/candidato/*"             element={<PortalCandidato />} />
           {/* Todo lo demás pasa por Layout */}
           <Route path="/*" element={<Layout />} />
         </Routes>
