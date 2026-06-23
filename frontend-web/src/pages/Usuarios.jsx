@@ -34,19 +34,52 @@ function RolBadge({ rol }) {
   );
 }
 
+// ─── BUG #1 CORREGIDO: se agrega password2 al estado y al formulario ──────────
+// ─── BUG #2 CORREGIDO: minLength={8} y placeholder "Mínimo 8 caracteres" ──────
 function ModalCrear({ t, onClose, onCreado }) {
-  const [form, setForm]   = useState({ nombre: '', apellidos: '', email: '', password: '', rol: 'reclutador', area_responsable: '', telefono: '' });
-  const [saving, setSave] = useState(false);
-  const [error, setError] = useState(null);
+  const [form, setForm] = useState({
+    nombre: '', apellidos: '', email: '',
+    password: '', password2: '',
+    rol: 'reclutador', area_responsable: '', telefono: '+51 ',
+  });
+  const [saving, setSave]     = useState(false);
+  const [error, setError]     = useState(null);
+  const [verPwd, setVerPwd]   = useState(false);
+  const [verPwd2, setVerPwd2] = useState(false);
 
-  const inp = { width: '100%', boxSizing: 'border-box', background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 8, padding: '9px 12px', fontSize: 13.5, color: t.text, outline: 'none', fontFamily: 'inherit' };
+  const inp = {
+    width: '100%', boxSizing: 'border-box',
+    background: t.inputBg, border: `1px solid ${t.inputBorder}`,
+    borderRadius: 8, padding: '9px 12px',
+    fontSize: 13.5, color: t.text, outline: 'none', fontFamily: 'inherit',
+  };
+
+  const eyeBtn = {
+    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+    background: 'none', border: 'none', cursor: 'pointer',
+    color: t.textFaint, padding: 2, display: 'flex', alignItems: 'center',
+    transition: 'color 0.15s',
+  };
 
   async function handleSubmit(e) {
-    e.preventDefault(); setError(null); setSave(true);
+    e.preventDefault();
+    setError(null);
+
+    if (form.password !== form.password2) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+    if (form.password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+
+    setSave(true);
     try {
       const { data } = await api.post('/api/auth/usuarios/crear/', form);
       toast.success(`Usuario ${data.nombre} creado. Se envió correo con credenciales.`);
-      onCreado(data); onClose();
+      onCreado(data);
+      onClose();
     } catch (err) {
       const d = err.response?.data;
       setError(d ? Object.entries(d).map(([k,v]) => `${k}: ${Array.isArray(v)?v.join(', '):v}`).join(' | ') : 'Error al crear.');
@@ -57,29 +90,98 @@ function ModalCrear({ t, onClose, onCreado }) {
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: '28px 26px', maxWidth: 480, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
         <div style={{ fontSize: 17, fontWeight: 700, color: t.text, marginBottom: 20 }}>Nuevo usuario</div>
-        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, color: '#f87171', fontSize: 12.5 }}>{error}</div>}
+
+        {error && (
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, color: '#f87171', fontSize: 12.5 }}>
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Nombre y apellidos */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {[['nombre','Nombre *','Juan'],['apellidos','Apellidos *','García']].map(([name,label,ph]) => (
               <div key={name}>
                 <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>{label}</label>
-                <input name={name} value={form[name]} onChange={e => setForm(p => ({...p,[e.target.name]:e.target.value}))} required style={inp} placeholder={ph} />
+                <input
+                  name={name} value={form[name]}
+                  onChange={e => setForm(p => ({...p, [e.target.name]: e.target.value}))}
+                  required style={inp} placeholder={ph}
+                />
               </div>
             ))}
           </div>
+
+          {/* Email */}
           <div>
             <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Email *</label>
-            <input type="email" value={form.email} onChange={e => setForm(p => ({...p,email:e.target.value}))} required style={inp} placeholder="juan@empresa.com" />
+            <input
+              type="email" value={form.email}
+              onChange={e => setForm(p => ({...p, email: e.target.value}))}
+              required style={inp} placeholder="juan@empresa.com"
+            />
           </div>
+
+          {/* Contraseña con ojo */}
           <div>
             <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Contraseña temporal *</label>
-            <input type="password" value={form.password} onChange={e => setForm(p => ({...p,password:e.target.value}))} required style={inp} placeholder="Mínimo 6 caracteres" />
-            <div style={{ fontSize: 11, color: t.textFaint, marginTop: 4 }}>El sistema enviará un correo al usuario con sus credenciales.</div>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={verPwd ? 'text' : 'password'}
+                value={form.password}
+                onChange={e => setForm(p => ({...p, password: e.target.value}))}
+                required minLength={8}
+                style={{ ...inp, paddingRight: 38 }}
+                placeholder="Mínimo 8 caracteres"
+              />
+              <button
+                type="button"
+                onClick={() => setVerPwd(v => !v)}
+                style={eyeBtn}
+                onMouseEnter={e => e.currentTarget.style.color = t.text}
+                onMouseLeave={e => e.currentTarget.style.color = t.textFaint}
+              >
+                <i className={`ti ${verPwd ? 'ti-eye-off' : 'ti-eye'}`} style={{ fontSize: 16 }} />
+              </button>
+            </div>
           </div>
+
+          {/* Confirmar contraseña con ojo */}
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Confirmar contraseña *</label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={verPwd2 ? 'text' : 'password'}
+                value={form.password2}
+                onChange={e => setForm(p => ({...p, password2: e.target.value}))}
+                required minLength={8}
+                style={{ ...inp, paddingRight: 38 }}
+                placeholder="Repite la contraseña"
+              />
+              <button
+                type="button"
+                onClick={() => setVerPwd2(v => !v)}
+                style={eyeBtn}
+                onMouseEnter={e => e.currentTarget.style.color = t.text}
+                onMouseLeave={e => e.currentTarget.style.color = t.textFaint}
+              >
+                <i className={`ti ${verPwd2 ? 'ti-eye-off' : 'ti-eye'}`} style={{ fontSize: 16 }} />
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: t.textFaint, marginTop: 4 }}>
+              El sistema enviará un correo al usuario con sus credenciales.
+            </div>
+          </div>
+
+          {/* Rol y teléfono */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Rol *</label>
-              <select value={form.rol} onChange={e => setForm(p => ({...p,rol:e.target.value}))} style={{ ...inp, cursor: 'pointer' }}>
+              <select
+                value={form.rol}
+                onChange={e => setForm(p => ({...p, rol: e.target.value}))}
+                style={{ ...inp, cursor: 'pointer' }}
+              >
                 <option value="reclutador">Reclutador</option>
                 <option value="evaluador">Evaluador</option>
                 <option value="gerente">Gerente</option>
@@ -88,16 +190,42 @@ function ModalCrear({ t, onClose, onCreado }) {
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Teléfono</label>
-              <input value={form.telefono} onChange={e => setForm(p => ({...p,telefono:e.target.value}))} style={inp} placeholder="+51 999 999 999" />
+              <input
+                value={form.telefono}
+                onChange={e => {
+                  const val = e.target.value;
+                  // No permite borrar el prefijo +51
+                  if (!val.startsWith('+51 ')) return;
+                  setForm(p => ({...p, telefono: val}));
+                }}
+                style={inp}
+                placeholder="+51 999 999 999"
+              />
             </div>
           </div>
+
+          {/* Área */}
           <div>
             <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Área responsable</label>
-            <input value={form.area_responsable} onChange={e => setForm(p => ({...p,area_responsable:e.target.value}))} style={inp} placeholder="Tecnología, Marketing, etc." />
+            <input
+              value={form.area_responsable}
+              onChange={e => setForm(p => ({...p, area_responsable: e.target.value}))}
+              style={inp} placeholder="Tecnología, Marketing, etc."
+            />
           </div>
+
+          {/* Botones */}
           <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 13.5, cursor: 'pointer' }}>Cancelar</button>
-            <button type="submit" disabled={saving} style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: saving ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: saving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+            <button
+              type="button" onClick={onClose}
+              style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 13.5, cursor: 'pointer' }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit" disabled={saving}
+              style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: saving ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: saving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+            >
               {saving && <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />}
               {saving ? 'Creando...' : 'Crear usuario'}
             </button>
@@ -108,15 +236,22 @@ function ModalCrear({ t, onClose, onCreado }) {
   );
 }
 
+// ─── Modal cambiar contraseña (sin cambios — minLength 6 está correcto aquí) ──
 function ModalPassword({ t, usuario, onClose }) {
   const [pwd, setPwd]     = useState('');
   const [saving, setSave] = useState(false);
   const [error, setError] = useState(null);
 
-  const inp = { width: '100%', boxSizing: 'border-box', background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 8, padding: '9px 12px', fontSize: 13.5, color: t.text, outline: 'none', fontFamily: 'inherit' };
+  const inp = {
+    width: '100%', boxSizing: 'border-box',
+    background: t.inputBg, border: `1px solid ${t.inputBorder}`,
+    borderRadius: 8, padding: '9px 12px',
+    fontSize: 13.5, color: t.text, outline: 'none', fontFamily: 'inherit',
+  };
 
   async function handleSubmit(e) {
-    e.preventDefault(); setError(null);
+    e.preventDefault();
+    setError(null);
     if (pwd.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); return; }
     setSave(true);
     try {
@@ -135,15 +270,33 @@ function ModalPassword({ t, usuario, onClose }) {
         <div style={{ fontSize: 13, color: t.textMuted, marginBottom: 20 }}>
           Nueva contraseña para <strong style={{ color: t.text }}>{usuario.nombre} {usuario.apellidos}</strong>
         </div>
-        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, color: '#f87171', fontSize: 12.5 }}>{error}</div>}
+        {error && (
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, color: '#f87171', fontSize: 12.5 }}>
+            {error}
+          </div>
+        )}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Nueva contraseña *</label>
-            <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} required style={inp} placeholder="Mínimo 6 caracteres" autoFocus />
+            <input
+              type="password" value={pwd}
+              onChange={e => setPwd(e.target.value)}
+              required style={inp}
+              placeholder="Mínimo 6 caracteres"
+              autoFocus
+            />
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 13.5, cursor: 'pointer' }}>Cancelar</button>
-            <button type="submit" disabled={saving} style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: saving ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: saving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+            <button
+              type="button" onClick={onClose}
+              style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 13.5, cursor: 'pointer' }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit" disabled={saving}
+              style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: saving ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: saving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+            >
               {saving && <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />}
               {saving ? 'Guardando...' : 'Cambiar contraseña'}
             </button>
@@ -159,13 +312,13 @@ export default function Usuarios() {
   const { t } = useTheme();
   const usuarioActual = JSON.parse(localStorage.getItem('usuario') || '{}');
 
-  const [usuarios, setUsuarios]     = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [showCrear, setCrear]       = useState(false);
-  const [modalPwd, setModalPwd]     = useState(null);
-  const [confirm, setConfirm]       = useState(null);
-  const [confirmLoad, setConfLoad]  = useState(false);
+  const [usuarios, setUsuarios]    = useState([]);
+  const [loading, setLoading]      = useState(true);
+  const [error, setError]          = useState(null);
+  const [showCrear, setCrear]      = useState(false);
+  const [modalPwd, setModalPwd]    = useState(null);
+  const [confirm, setConfirm]      = useState(null);
+  const [confirmLoad, setConfLoad] = useState(false);
 
   useEffect(() => { cargar(); }, []);
 
@@ -221,10 +374,10 @@ export default function Usuarios() {
   }
 
   const stats = {
-    total:       usuarios.length,
-    activos:     usuarios.filter(u => u.is_active).length,
-    inactivos:   usuarios.filter(u => !u.is_active).length,
-    admins:      usuarios.filter(u => u.rol === 'admin').length,
+    total:     usuarios.length,
+    activos:   usuarios.filter(u => u.is_active).length,
+    inactivos: usuarios.filter(u => !u.is_active).length,
+    admins:    usuarios.filter(u => u.rol === 'admin').length,
   };
 
   const card = { background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 12, transition: 'background 0.25s' };
@@ -246,9 +399,9 @@ export default function Usuarios() {
     <div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
-      {showCrear  && <ModalCrear    t={t} onClose={() => setCrear(false)} onCreado={u => setUsuarios(p => [...p, u])} />}
-      {modalPwd   && <ModalPassword t={t} usuario={modalPwd} onClose={() => setModalPwd(null)} />}
-      {confirm    && <ConfirmModal  {...confirm} loading={confirmLoad} onClose={() => { if (!confirmLoad) setConfirm(null); }} />}
+      {showCrear && <ModalCrear t={t} onClose={() => setCrear(false)} onCreado={u => setUsuarios(p => [...p, u])} />}
+      {modalPwd  && <ModalPassword t={t} usuario={modalPwd} onClose={() => setModalPwd(null)} />}
+      {confirm   && <ConfirmModal {...confirm} loading={confirmLoad} onClose={() => { if (!confirmLoad) setConfirm(null); }} />}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
@@ -270,7 +423,7 @@ export default function Usuarios() {
         ))}
       </div>
 
-      {/* Botón nuevo */}
+      {/* Botón nuevo usuario */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
         <button onClick={() => setCrear(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 18px rgba(124,58,237,0.28)' }}>
           <i className="ti ti-user-plus" style={{ fontSize: 16 }} /> Nuevo usuario
@@ -291,7 +444,8 @@ export default function Usuarios() {
             {usuarios.map((u, i) => {
               const soyYo = u.email === usuarioActual.email;
               return (
-                <tr key={u.id}
+                <tr
+                  key={u.id}
                   style={{ borderBottom: i < usuarios.length - 1 ? `1px solid ${t.cardBorder}` : 'none', transition: 'background 0.12s', opacity: u.is_active ? 1 : 0.6 }}
                   onMouseEnter={e => e.currentTarget.style.background = t.rowHover}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
