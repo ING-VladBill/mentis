@@ -19,6 +19,7 @@ from autenticacion.views import (
     login_candidato, perfil_usuario,
     crear_usuario_rrhh, listar_usuarios_rrhh,
     desactivar_usuario, activar_usuario, cambiar_password_usuario,
+    reenviar_credenciales,
 )
 
 router = DefaultRouter()
@@ -47,6 +48,7 @@ urlpatterns = [
     path('api/auth/usuarios/<int:pk>/desactivar/',   desactivar_usuario,        name='auth-usuarios-desactivar'),
     path('api/auth/usuarios/<int:pk>/activar/',      activar_usuario,           name='auth-usuarios-activar'),
     path('api/auth/usuarios/<int:pk>/cambiar-password/', cambiar_password_usuario, name='auth-usuarios-password'),
+    path('api/auth/usuarios/<int:pk>/reenviar-credenciales/', reenviar_credenciales, name='auth-usuarios-reenviar'),
 
     # ------------------------------------------
     # FORMULARIO PÚBLICO (sin login)
