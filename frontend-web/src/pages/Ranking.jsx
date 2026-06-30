@@ -87,7 +87,7 @@ function ScoreBarCompact({ value, trackBg }) {
       <div style={{ flex: 1, height: 5, borderRadius: 3, background: trackBg || 'rgba(128,128,128,0.15)' }}>
         <div style={{ width: `${Math.min(100, value)}%`, height: '100%', borderRadius: 3, background: color }} />
       </div>
-      <span style={{ fontSize: 11.5, fontWeight: 600, color, minWidth: 30 }}>{value}%</span>
+      <span style={{ fontSize: 11.5, fontWeight: 600, color, minWidth: 48 }}>{value}/100</span>
     </div>
   );
 }
