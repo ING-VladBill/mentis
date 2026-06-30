@@ -34,18 +34,13 @@ function RolBadge({ rol }) {
   );
 }
 
-// ─── BUG #1 CORREGIDO: se agrega password2 al estado y al formulario ──────────
-// ─── BUG #2 CORREGIDO: minLength={8} y placeholder "Mínimo 8 caracteres" ──────
 function ModalCrear({ t, onClose, onCreado }) {
   const [form, setForm] = useState({
     nombre: '', apellidos: '', email: '',
-    password: '', password2: '',
     rol: 'reclutador', area_responsable: '', telefono: '+51 ',
   });
-  const [saving, setSave]     = useState(false);
-  const [error, setError]     = useState(null);
-  const [verPwd, setVerPwd]   = useState(false);
-  const [verPwd2, setVerPwd2] = useState(false);
+  const [saving, setSave] = useState(false);
+  const [error, setError] = useState(null);
 
   const inp = {
     width: '100%', boxSizing: 'border-box',
@@ -54,26 +49,9 @@ function ModalCrear({ t, onClose, onCreado }) {
     fontSize: 13.5, color: t.text, outline: 'none', fontFamily: 'inherit',
   };
 
-  const eyeBtn = {
-    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-    background: 'none', border: 'none', cursor: 'pointer',
-    color: t.textFaint, padding: 2, display: 'flex', alignItems: 'center',
-    transition: 'color 0.15s',
-  };
-
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
-
-    if (form.password !== form.password2) {
-      setError('Las contraseñas no coinciden.');
-      return;
-    }
-    if (form.password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.');
-      return;
-    }
-
     setSave(true);
     try {
       const { data } = await api.post('/api/auth/usuarios/crear/', form);
@@ -122,55 +100,10 @@ function ModalCrear({ t, onClose, onCreado }) {
             />
           </div>
 
-          {/* Contraseña con ojo */}
-          <div>
-            <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Contraseña temporal *</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={verPwd ? 'text' : 'password'}
-                value={form.password}
-                onChange={e => setForm(p => ({...p, password: e.target.value}))}
-                required minLength={8}
-                style={{ ...inp, paddingRight: 38 }}
-                placeholder="Mínimo 8 caracteres"
-              />
-              <button
-                type="button"
-                onClick={() => setVerPwd(v => !v)}
-                style={eyeBtn}
-                onMouseEnter={e => e.currentTarget.style.color = t.text}
-                onMouseLeave={e => e.currentTarget.style.color = t.textFaint}
-              >
-                <i className={`ti ${verPwd ? 'ti-eye-off' : 'ti-eye'}`} style={{ fontSize: 16 }} />
-              </button>
-            </div>
-          </div>
-
-          {/* Confirmar contraseña con ojo */}
-          <div>
-            <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Confirmar contraseña *</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={verPwd2 ? 'text' : 'password'}
-                value={form.password2}
-                onChange={e => setForm(p => ({...p, password2: e.target.value}))}
-                required minLength={8}
-                style={{ ...inp, paddingRight: 38 }}
-                placeholder="Repite la contraseña"
-              />
-              <button
-                type="button"
-                onClick={() => setVerPwd2(v => !v)}
-                style={eyeBtn}
-                onMouseEnter={e => e.currentTarget.style.color = t.text}
-                onMouseLeave={e => e.currentTarget.style.color = t.textFaint}
-              >
-                <i className={`ti ${verPwd2 ? 'ti-eye-off' : 'ti-eye'}`} style={{ fontSize: 16 }} />
-              </button>
-            </div>
-            <div style={{ fontSize: 11, color: t.textFaint, marginTop: 4 }}>
-              El sistema enviará un correo al usuario con sus credenciales.
-            </div>
+          {/* Aviso auto-contraseña */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.18)', fontSize: 12.5, color: t.textMuted }}>
+            <i className="ti ti-lock" style={{ fontSize: 15, color: '#a78bfa', marginTop: 1, flexShrink: 0 }} />
+            El sistema generará una contraseña segura automáticamente y la enviará al correo del usuario.
           </div>
 
           {/* Rol y teléfono */}
@@ -331,6 +264,26 @@ export default function Usuarios() {
     finally { setLoading(false); }
   }
 
+  function pedirReenviarCredenciales(u) {
+    setConfirm({
+      tipo: 'warning',
+      icono: '📧',
+      titulo: 'Reenviar credenciales',
+      mensaje: `¿Reenviar correo a ${u.nombre} ${u.apellidos}? Se generará una nueva contraseña temporal y se enviará a ${u.email}. La contraseña anterior dejará de funcionar.`,
+      labelOk: 'Reenviar',
+      onConfirm: async () => {
+        setConfLoad(true);
+        try {
+          const { data } = await api.post(`/api/auth/usuarios/${u.id}/reenviar-credenciales/`);
+          toast.success(data.mensaje || 'Correo reenviado.');
+          setConfirm(null);
+        } catch (err) {
+          toast.error(err.response?.data?.error || 'Error al reenviar.');
+        } finally { setConfLoad(false); }
+      },
+    });
+  }
+
   function pedirDesactivar(u) {
     setConfirm({
       tipo: 'warning',
@@ -475,6 +428,17 @@ export default function Usuarios() {
                   <td style={{ padding: '13px 16px' }}>
                     {!soyYo && (
                       <div style={{ display: 'flex', gap: 6 }}>
+                        {/* Reenviar credenciales */}
+                        <button
+                          onClick={() => pedirReenviarCredenciales(u)}
+                          title="Reenviar credenciales por correo"
+                          style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                          onMouseEnter={e => { e.currentTarget.style.color = '#60a5fa'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.3)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}
+                        >
+                          <i className="ti ti-mail-forward" />
+                        </button>
+
                         {/* Cambiar contraseña */}
                         <button
                           onClick={() => setModalPwd(u)}

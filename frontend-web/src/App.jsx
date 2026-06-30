@@ -26,6 +26,7 @@ import Examen               from './pages/candidato/Examen';
 import ExamenFinalizado     from './pages/candidato/ExamenFinalizado';
 import Progreso             from './pages/candidato/Progreso';
 import SesionExpirada       from './pages/candidato/SesionExpirada';
+import RedireccionadorCandidato from './pages/RedireccionadorCandidato';
 import ProtectedRoute from './components/ProtectedRoute';
 import api            from './services/api';
 
@@ -146,7 +147,7 @@ function Sidebar() {
 
       {/* Nav */}
       <nav style={{ padding: '14px 10px', flex: 1, overflowY: 'auto' }}>
-        <div style={{ fontSize: 10, color: t.textFaint, letterSpacing: '0.14em', padding: '6px 10px 8px', fontWeight: 600 }}>SPRINT 2</div>
+        <div style={{ fontSize: 10, color: t.textFaint, letterSpacing: '0.14em', padding: '6px 10px 8px', fontWeight: 600 }}>SPRINT 3</div>
         {NAV_MAIN.map(({ to, icon, label }) => (
           <NavLink key={to} to={to} style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: 10,
@@ -189,10 +190,10 @@ function Sidebar() {
         padding: '10px 14px', margin: '0 10px 10px', borderRadius: 10,
         background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.18)',
       }}>
-        <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, marginBottom: 2 }}>Sprint 2 — En progreso</div>
-        <div style={{ fontSize: 10.5, color: t.textFaint }}>Autenticación + IA</div>
+        <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, marginBottom: 2 }}>Sprint 3 — En progreso</div>
+        <div style={{ fontSize: 10.5, color: t.textFaint }}>Flujo candidato + correos</div>
         <div style={{ marginTop: 8, background: t.toggleBg, borderRadius: 4, height: 4 }}>
-          <div style={{ width: '20%', height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,#7c3aed,#6d28d9)' }} />
+          <div style={{ width: '60%', height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,#7c3aed,#6d28d9)' }} />
         </div>
       </div>
 
@@ -440,6 +441,7 @@ export default function App() {
           {/* Pública */}
           <Route path="/login"                   element={<Login />} />
           <Route path="/postular/:codigo"        element={<Postular />} />
+          <Route path="/evaluacion/:tipo"        element={<RedireccionadorCandidato />} />
           {/* Portal candidato — descomenta cuando copies src/pages/candidato/ */}
           <Route path="/candidato/*" element={<PortalCandidato />} />
           {/* Todo lo demás pasa por Layout */}
