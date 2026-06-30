@@ -32,11 +32,19 @@ public class AuthService {
 
     @Transactional
     public Map<String, Object> acceder(String tokenRaw, String ip) {
-        // Django guarda los UUID sin guiones en MySQL
-        String token = tokenRaw.replace("-", "").trim().toLowerCase();
+        String entrada = tokenRaw.trim();
+        TokenAcceso t;
 
-        TokenAcceso t = tokenRepo.findByToken(token)
-                .orElseThrow(() -> ApiException.notFound("El link no es válido. Verifica tu correo."));
+        // Caso 1: es un código corto legible (MENTIS-XXXX-XXXX), usado en la app móvil
+        if (entrada.toUpperCase().startsWith("MENTIS-")) {
+            t = tokenRepo.findByCodigoCorto(entrada.toUpperCase())
+                    .orElseThrow(() -> ApiException.notFound("El código no es válido. Verifica tu correo."));
+        } else {
+            // Caso 2: es el UUID del link (Django lo guarda sin guiones y en minúscula)
+            String token = entrada.replace("-", "").toLowerCase();
+            t = tokenRepo.findByToken(token)
+                    .orElseThrow(() -> ApiException.notFound("El link no es válido. Verifica tu correo."));
+        }
 
         LocalDateTime ahoraUtc = LocalDateTime.now(ZoneOffset.UTC);
 

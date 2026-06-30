@@ -8,8 +8,9 @@ import logging
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
-from django.core.mail import EmailMultiAlternatives
+
 from candidatos.models import TokenAcceso
+from django.core.mail import EmailMultiAlternatives
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +223,26 @@ def _info_box(titulo: str, items: list, color: str = COLOR_PRIMARY) -> str:
     </table>"""
 
 
+
+def _bloque_codigo(codigo: str) -> str:
+    """Caja destacada con el código de acceso corto para la app móvil."""
+    return f"""
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+      <tr>
+        <td style="background:linear-gradient(135deg,#EEF2FF,#F5F3FF); border:2px dashed {COLOR_PRIMARY}; border-radius:14px; padding:22px 20px; text-align:center;">
+          <p style="margin:0 0 8px; font-size:12px; font-weight:700; color:{COLOR_TEXT_MUTED}; letter-spacing:1.5px; text-transform:uppercase;">
+            ¿Ingresas desde la app móvil?
+          </p>
+          <p style="margin:0 0 6px; font-size:13px; color:{COLOR_TEXT_MUTED};">
+            Usa este código de acceso:
+          </p>
+          <p style="margin:0; font-size:30px; font-weight:800; color:{COLOR_PRIMARY_DARK}; letter-spacing:3px; font-family:'Courier New',monospace;">
+            {codigo}
+          </p>
+        </td>
+      </tr>
+    </table>"""
+
 def _link_alternativo(link: str) -> str:
     return f"""
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 0;">
@@ -316,6 +337,7 @@ def enviar_correo_avance_cv(candidato) -> bool:
 
     {_boton('Iniciar evaluación', link)}
     {_link_alternativo(link)}
+    {_bloque_codigo(token.codigo_corto)}
 
     <p style="margin:24px 0 0; color:{COLOR_TEXT_MUTED}; font-size:14px; line-height:1.6; text-align:center;">Estamos seguros de que harás un gran papel. ¡Mucho éxito! 💪</p>
     """
@@ -358,6 +380,7 @@ def enviar_correo_avance_examen(candidato) -> bool:
 
     {_boton('Iniciar entrevista IA', link, color=COLOR_ACCENT)}
     {_link_alternativo(link)}
+    {_bloque_codigo(token.codigo_corto)}
 
     <p style="margin:24px 0 0; color:{COLOR_TEXT_MUTED}; font-size:14px; line-height:1.6; text-align:center;">Sé tú mismo/a y responde con calma. ¡Confía en tu experiencia! 🚀</p>
     """

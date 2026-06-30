@@ -286,9 +286,21 @@ class NotaCandidato(models.Model):
         return f'Nota de {self.autor} sobre {self.candidato.nombre_completo}'
 
 
+def _generar_codigo_corto():
+    """Genera un código corto, legible y fácil de teclear: MENTIS-XXXX-XXXX.
+    Sin caracteres ambiguos (0/O, 1/I/L) para evitar confusiones al transcribir."""
+    import secrets
+    alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'  # sin O,0,1,I,L
+    parte1 = ''.join(secrets.choice(alfabeto) for _ in range(4))
+    parte2 = ''.join(secrets.choice(alfabeto) for _ in range(4))
+    return f'MENTIS-{parte1}-{parte2}'
+
+
 class TokenAcceso(models.Model):
-    token     = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    candidato = models.ForeignKey(Candidato, on_delete=models.CASCADE, related_name='tokens')
+    token       = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    codigo_corto = models.CharField(max_length=20, unique=True, null=True, blank=True,
+                                    help_text='Código legible para ingresar en la app móvil')
+    candidato   = models.ForeignKey(Candidato, on_delete=models.CASCADE, related_name='tokens')
 
     TIPO_CHOICES = [
         ('examen',     'Link de acceso al examen'),
@@ -304,6 +316,16 @@ class TokenAcceso(models.Model):
     class Meta:
         db_table = 'tokens_acceso'
 
+    def save(self, *args, **kwargs):
+        if not self.codigo_corto:
+            # Generar uno único (reintenta si colisiona)
+            for _ in range(10):
+                candidato_codigo = _generar_codigo_corto()
+                if not TokenAcceso.objects.filter(codigo_corto=candidato_codigo).exists():
+                    self.codigo_corto = candidato_codigo
+                    break
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f'Token {self.tipo} → {self.candidato.nombre_completo}'
 
@@ -314,7 +336,7 @@ class TokenAcceso(models.Model):
 
     def get_url(self):
         base = settings.MENTIS['FRONTEND_URL']
-        return f'{base}/evaluacion/{self.tipo}?token={self.token}'
+        return f'{base}/candidato/acceso?token={self.token}'
 
     def marcar_como_usado(self, ip=None):
         from django.utils import timezone

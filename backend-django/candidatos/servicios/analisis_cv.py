@@ -170,6 +170,8 @@ Score total 0-100 distribuido así:
   "email_detectado": <email válido o null>,
   "telefono_detectado": <string o null>,
   "linkedin_detectado": <url o null>,
+  "github_detectado": <url o null>,
+  "portfolio_detectado": <url o null>,
   "habilidades_detectadas": [<lista de habilidades encontradas en el CV>],
   "habilidades_requeridas_presentes": [<habilidades del listado de requisitos que SÍ tiene>],
   "habilidades_faltantes": [<habilidades requeridas que NO tiene>],
@@ -214,6 +216,10 @@ def _procesar_resultado_analisis(resultado: dict, candidato, vacante) -> dict:
         candidato.telefono = resultado['telefono_detectado']
     if resultado.get('linkedin_detectado') and not candidato.linkedin:
         candidato.linkedin = resultado['linkedin_detectado']
+    if resultado.get('github_detectado') and not candidato.github:
+        candidato.github = resultado['github_detectado']
+    if resultado.get('portfolio_detectado') and not candidato.portfolio:
+        candidato.portfolio = resultado['portfolio_detectado']
     if resultado.get('anios_experiencia_detectados') and not candidato.anios_experiencia:
         candidato.anios_experiencia = resultado['anios_experiencia_detectados']
     if resultado.get('carrera_detectada') and not candidato.carrera:
