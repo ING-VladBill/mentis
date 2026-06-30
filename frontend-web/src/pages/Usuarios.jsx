@@ -39,8 +39,13 @@ function ModalCrear({ t, onClose, onCreado }) {
     nombre: '', apellidos: '', email: '',
     rol: 'reclutador', area_responsable: '', telefono: '+51 ',
   });
-  const [saving, setSave] = useState(false);
-  const [error, setError] = useState(null);
+  const [areas, setAreas]   = useState([]);
+  const [saving, setSave]   = useState(false);
+  const [error, setError]   = useState(null);
+
+  useEffect(() => {
+    api.get('/api/areas/').then(r => setAreas(r.data.results || r.data)).catch(() => {});
+  }, []);
 
   const inp = {
     width: '100%', boxSizing: 'border-box',
@@ -140,11 +145,16 @@ function ModalCrear({ t, onClose, onCreado }) {
           {/* Área */}
           <div>
             <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Área responsable</label>
-            <input
+            <select
               value={form.area_responsable}
               onChange={e => setForm(p => ({...p, area_responsable: e.target.value}))}
-              style={inp} placeholder="Tecnología, Marketing, etc."
-            />
+              style={{ ...inp, cursor: 'pointer' }}
+            >
+              <option value="">— Selecciona un área —</option>
+              {areas.map(a => (
+                <option key={a.id} value={a.nombre}>[{a.codigo_corto}] {a.nombre}</option>
+              ))}
+            </select>
           </div>
 
           {/* Botones */}

@@ -35,10 +35,10 @@ function Timer({ segundos, onExpira }) {
       padding: '8px 16px', borderRadius: 10,
       background: critico ? 'rgba(248,113,113,0.1)' : 'rgba(124,58,237,0.08)',
       border: `1px solid ${critico ? 'rgba(248,113,113,0.3)' : 'rgba(124,58,237,0.2)'}`,
-      transition: 'all 0.3s',
+      transition: 'background 400ms cubic-bezier(0.77,0,0.175,1), border-color 400ms cubic-bezier(0.77,0,0.175,1)',
     }}>
-      <i className="ti ti-clock" style={{ fontSize: 16, color: critico ? '#f87171' : '#7c3aed' }} />
-      <span style={{ fontSize: 17, fontWeight: 700, fontFamily: 'ui-monospace, monospace', color: critico ? '#f87171' : '#7c3aed', letterSpacing: '0.05em' }}>
+      <i className="ti ti-clock" style={{ fontSize: 16, color: critico ? '#f87171' : '#7c3aed', transition: 'color 400ms cubic-bezier(0.77,0,0.175,1)' }} />
+      <span style={{ fontSize: 17, fontWeight: 700, fontFamily: 'ui-monospace, monospace', color: critico ? '#f87171' : '#7c3aed', letterSpacing: '0.05em', transition: 'color 400ms cubic-bezier(0.77,0,0.175,1)' }}>
         {horas > 0 ? `${fmt(horas)}:` : ''}{fmt(mins)}:{fmt(segs)}
       </span>
     </div>
@@ -56,10 +56,13 @@ function PreguntaMultiple({ pregunta, respuesta, onResponder }) {
             padding: '14px 18px', borderRadius: 12, cursor: 'pointer',
             border: seleccionada ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
             background: seleccionada ? 'rgba(124,58,237,0.07)' : '#fafafa',
-            transition: 'all 0.15s', textAlign: 'left', fontFamily: 'inherit',
+            transition: 'border-color 0.15s, background 0.15s, transform 0.1s cubic-bezier(0.34,1.56,0.64,1)',
+            textAlign: 'left', fontFamily: 'inherit',
           }}
             onMouseEnter={e => { if (!seleccionada) e.currentTarget.style.borderColor = '#c4b5fd'; }}
             onMouseLeave={e => { if (!seleccionada) e.currentTarget.style.borderColor = '#e5e7eb'; }}
+            onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.98)'; }}
+            onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
           >
             <div style={{
               width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
@@ -109,6 +112,8 @@ export default function Examen() {
   const [guardando,  setGuardando]  = useState({});
   const [finalizando, setFinalizando] = useState(false);
   const [mostrarConfirm, setConfirm]  = useState(false);
+  const [pregAnim, setPregAnim] = useState('idle'); // 'idle' | 'saliendo' | 'entrando'
+  const pregPendienteRef = useRef(null);
 
   // Token de sesión del candidato
   if (!localStorage.getItem('candidato_token')) { navigate('/candidato/acceso'); }
@@ -229,6 +234,18 @@ export default function Examen() {
     }
   }
 
+  // ── Cambio de pregunta con animación de slide ──
+  function irAPregunta(idx) {
+    if (idx === pregActual) return;
+    pregPendienteRef.current = idx;
+    setPregAnim('saliendo');
+    setTimeout(() => {
+      setPregActual(pregPendienteRef.current);
+      setPregAnim('entrando');
+      setTimeout(() => setPregAnim('idle'), 220);
+    }, 150 + 30); // salida 150ms + gap 30ms
+  }
+
   // ── Timer expirado ──
   function onTimerExpira() { finalizar(); }
 
@@ -259,9 +276,23 @@ export default function Examen() {
   const respuestaActual  = pregunta ? respuestas[pregunta.id] || '' : '';
   const estaGuardando    = pregunta ? !!guardando[pregunta.id] : false;
 
+  const pregAnimStyle = pregAnim === 'saliendo'
+    ? { opacity: 0, transform: 'translateX(-16px)', transition: 'opacity 150ms cubic-bezier(0.77,0,0.175,1), transform 150ms cubic-bezier(0.77,0,0.175,1)' }
+    : pregAnim === 'entrando'
+    ? { opacity: 0, transform: 'translateX(16px)' }
+    : { opacity: 1, transform: 'translateX(0)', transition: 'opacity 220ms cubic-bezier(0.23,1,0.32,1), transform 220ms cubic-bezier(0.23,1,0.32,1)' };
+
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fb', fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .pregmap-btn:hover { transform: scale(1.1) !important; }
+        }
+      `}</style>
 
       {/* Modal confirmación finalizar */}
       {mostrarConfirm && (
@@ -320,7 +351,7 @@ export default function Examen() {
 
         {/* Pregunta actual */}
         {pregunta && (
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 18, padding: '28px 30px' }}>
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 18, padding: '28px 30px', ...pregAnimStyle }}>
             {/* Meta de la pregunta */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -360,10 +391,22 @@ export default function Examen() {
 
             {/* Navegación */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24, paddingTop: 20, borderTop: '1px solid #f3f4f6' }}>
-              <button onClick={() => setPregActual(p => Math.max(0, p - 1))} disabled={pregActual === 0} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontSize: 13.5, cursor: pregActual === 0 ? 'not-allowed' : 'pointer', opacity: pregActual === 0 ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
+              <button
+                onClick={() => irAPregunta(Math.max(0, pregActual - 1))}
+                disabled={pregActual === 0}
+                style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontSize: 13.5, cursor: pregActual === 0 ? 'not-allowed' : 'pointer', opacity: pregActual === 0 ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', transition: 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)' }}
+                onMouseDown={e => { if (pregActual !== 0) e.currentTarget.style.transform = 'scale(0.97)'; }}
+                onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+              >
                 <i className="ti ti-arrow-left" /> Anterior
               </button>
-              <button onClick={() => setPregActual(p => Math.min(preguntas.length - 1, p + 1))} disabled={pregActual === preguntas.length - 1} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, cursor: pregActual === preguntas.length - 1 ? 'not-allowed' : 'pointer', opacity: pregActual === preguntas.length - 1 ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontWeight: 600 }}>
+              <button
+                onClick={() => irAPregunta(Math.min(preguntas.length - 1, pregActual + 1))}
+                disabled={pregActual === preguntas.length - 1}
+                style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, cursor: pregActual === preguntas.length - 1 ? 'not-allowed' : 'pointer', opacity: pregActual === preguntas.length - 1 ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontWeight: 600, transition: 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)' }}
+                onMouseDown={e => { if (pregActual !== preguntas.length - 1) e.currentTarget.style.transform = 'scale(0.97)'; }}
+                onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+              >
                 Siguiente <i className="ti ti-arrow-right" />
               </button>
             </div>
@@ -378,14 +421,22 @@ export default function Examen() {
               const respondida = !!respuestas[p.id]?.trim();
               const esActual   = i === pregActual;
               return (
-                <button key={p.id} onClick={() => setPregActual(i)} style={{
-                  width: 36, height: 36, borderRadius: 9,
-                  border: esActual ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
-                  background: esActual ? 'rgba(124,58,237,0.1)' : respondida ? 'rgba(52,211,153,0.1)' : '#f9fafb',
-                  color: esActual ? '#7c3aed' : respondida ? '#059669' : '#9ca3af',
-                  fontSize: 12.5, fontWeight: esActual || respondida ? 700 : 400,
-                  cursor: 'pointer', transition: 'all 0.15s',
-                }}>
+                <button
+                  key={p.id}
+                  className="pregmap-btn"
+                  onClick={() => irAPregunta(i)}
+                  style={{
+                    width: 36, height: 36, borderRadius: 9,
+                    border: esActual ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
+                    background: esActual ? 'rgba(124,58,237,0.1)' : respondida ? 'rgba(52,211,153,0.1)' : '#f9fafb',
+                    color: esActual ? '#7c3aed' : respondida ? '#059669' : '#9ca3af',
+                    fontSize: 12.5, fontWeight: esActual || respondida ? 700 : 400,
+                    cursor: 'pointer',
+                    transition: 'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',
+                  }}
+                  onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.95)'; }}
+                  onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+                >
                   {i + 1}
                 </button>
               );
