@@ -6,6 +6,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.mentis.app.presentation.acceso.AccesoScreen
+import com.mentis.app.presentation.examen.ExamenScreen
+import com.mentis.app.presentation.finalizado.FinalizadoScreen
+import com.mentis.app.presentation.instrucciones.InstruccionesScreen
 import com.mentis.app.presentation.progreso.ProgresoScreen
 
 @Composable
@@ -47,17 +50,35 @@ fun NavGraph(navController: NavHostController = rememberNavController()) {
 
         // ── PANTALLA 2: Instrucciones (HAROLD) ──
         composable(Screen.Instrucciones.route) {
-            // Harold implementa InstruccionesScreen aquí
+            InstruccionesScreen(
+                onComenzarExamen = {
+                    navController.navigate(Screen.Examen.route) {
+                        popUpTo(Screen.Instrucciones.route) { inclusive = true }
+                    }
+                }
+            )
         }
 
         // ── PANTALLA 3: Examen (HAROLD) ──
         composable(Screen.Examen.route) {
-            // Harold implementa ExamenScreen aquí
+            ExamenScreen(
+                onExamenFinalizado = {
+                    navController.navigate(Screen.Finalizado.route) {
+                        popUpTo(Screen.Examen.route) { inclusive = true }
+                    }
+                }
+            )
         }
 
         // ── PANTALLA 4: Finalizado (HAROLD) ──
         composable(Screen.Finalizado.route) {
-            // Harold implementa FinalizadoScreen aquí
+            FinalizadoScreen(
+                onVerProgreso = {
+                    navController.navigate(Screen.Progreso.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

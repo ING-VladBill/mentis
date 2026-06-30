@@ -1,8 +1,10 @@
 package com.mentis.app.di
 
 import com.mentis.app.data.repository.AuthRepositoryImpl
+import com.mentis.app.data.repository.ExamenRepositoryImpl
 import com.mentis.app.data.repository.ProgresoRepositoryImpl
 import com.mentis.app.domain.repository.AuthRepository
+import com.mentis.app.domain.repository.ExamenRepository
 import com.mentis.app.domain.repository.ProgresoRepository
 import dagger.Binds
 import dagger.Module
@@ -21,4 +23,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindProgresoRepository(impl: ProgresoRepositoryImpl): ProgresoRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindExamenRepository(impl: ExamenRepositoryImpl): ExamenRepository
 }
