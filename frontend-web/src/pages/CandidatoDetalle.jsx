@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { useTheme } from '../App';
+import { useTheme } from '../ThemeContext';
 import api from '../services/api';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────

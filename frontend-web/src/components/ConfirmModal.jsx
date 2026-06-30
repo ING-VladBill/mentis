@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useTheme } from '../App';
+import { useTheme } from '../ThemeContext';
 
 // ─── ConfirmModal ─────────────────────────────────────────────────────────────
 // Reemplaza todos los confirm() y alert() nativos del navegador.

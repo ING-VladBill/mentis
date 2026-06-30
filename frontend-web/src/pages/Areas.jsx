@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { useTheme } from '../App';
+import { useTheme } from '../ThemeContext';
 import api from '../services/api';
 
 // ─── Íconos disponibles para selección visual ─────────────────────────────────

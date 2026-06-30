@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useTheme } from '../App';
+import { useTheme } from '../ThemeContext';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';

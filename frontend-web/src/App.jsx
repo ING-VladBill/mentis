@@ -2,7 +2,7 @@ import {
   BrowserRouter, Routes, Route, NavLink,
   useLocation, useNavigate, Navigate,
 } from 'react-router-dom';
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 
 import VacantesList   from './pages/VacantesList';
@@ -19,6 +19,7 @@ import CargaMasiva    from './pages/CargaMasiva';
 import Postular       from './pages/Postular';
 import Evaluaciones   from './pages/Evaluaciones';
 import ExamenDetalle  from './pages/ExamenDetalle';
+// ─── Portal candidato — descomenta cuando copies la carpeta src/pages/candidato/ ──
 import AccesoCandidato      from './pages/candidato/Acceso';
 import ExamenInstrucciones  from './pages/candidato/ExamenInstrucciones';
 import Examen               from './pages/candidato/Examen';
@@ -29,8 +30,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import api            from './services/api';
 
 // ─── Theme Context ────────────────────────────────────────────────────────────
-export const ThemeContext = createContext();
-export function useTheme() { return useContext(ThemeContext); }
+import { ThemeContext, useTheme } from './ThemeContext';
 
 function tokens(dark) {
   return dark ? {
@@ -359,16 +359,16 @@ function Layout() {
   );
 }
 
-// ─── Portal del candidato (rutas /candidato/*) ────────────────────────────────
+// ─── Portal del candidato — descomenta cuando copies src/pages/candidato/ ────
 function PortalCandidato() {
   return (
     <Routes>
-      <Route path="acceso"       element={<AccesoCandidato />} />
+      <Route path="acceso"        element={<AccesoCandidato />} />
       <Route path="instrucciones" element={<ExamenInstrucciones />} />
-      <Route path="examen"       element={<Examen />} />
-      <Route path="finalizado"   element={<ExamenFinalizado />} />
-      <Route path="progreso"     element={<Progreso />} />
-      <Route path="expirado"     element={<SesionExpirada />} />
+      <Route path="examen"        element={<Examen />} />
+      <Route path="finalizado"    element={<ExamenFinalizado />} />
+      <Route path="progreso"      element={<Progreso />} />
+      <Route path="expirado"      element={<SesionExpirada />} />
     </Routes>
   );
 }
@@ -440,8 +440,8 @@ export default function App() {
           {/* Pública */}
           <Route path="/login"                   element={<Login />} />
           <Route path="/postular/:codigo"        element={<Postular />} />
-          {/* Portal candidato — Spring Boot, sin login de RRHH */}
-          <Route path="/candidato/*"             element={<PortalCandidato />} />
+          {/* Portal candidato — descomenta cuando copies src/pages/candidato/ */}
+          <Route path="/candidato/*" element={<PortalCandidato />} />
           {/* Todo lo demás pasa por Layout */}
           <Route path="/*" element={<Layout />} />
         </Routes>
