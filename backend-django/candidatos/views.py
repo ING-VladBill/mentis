@@ -24,7 +24,7 @@ from .serializers import (
     TagSerializer,
 )
 from .servicios.analisis_cv import analizar_cv, extraer_texto_pdf, procesar_cv_individual
-from .servicios.correos import enviar_correo_avance_cv
+from .servicios.correos import enviar_correo_avance_cv, enviar_correo_avance_examen, enviar_correo_finalista
 from mentis_backend.permissions import EsReclutadorOAdmin, EsAdmin
 
 logger = logging.getLogger(__name__)
@@ -252,6 +252,54 @@ class CandidatoViewSet(viewsets.ModelViewSet):
                 c.save(update_fields=['posicion_ranking'])
 
         return Response({'total': candidatos.count(), 'ranking': CandidatoRankingSerializer(candidatos, many=True).data})
+
+    # ------------------------------------------
+    # REENVIAR CORREO SEGÚN ETAPA ACTUAL
+    # ------------------------------------------
+    @action(detail=True, methods=['post'], url_path='reenviar-correo-etapa')
+    def reenviar_correo_etapa(self, request, pk=None):
+        """
+        Reenvía el correo correspondiente a la etapa ACTUAL del candidato.
+        Solo disponible si el candidato superó al menos el filtro de CV.
+        - cv_aprobado / examen_pendiente / examen_en_curso  -> correo de examen
+        - examen_aprobado / entrevista_pendiente / entrevista_en_curso -> correo de entrevista IA
+        - entrevista_completada / finalista -> correo de finalista
+        """
+        candidato = self.get_object()
+
+        # Mapeo estado -> (función de correo, etiqueta legible)
+        mapa_estados = {
+            'cv_aprobado':           (enviar_correo_avance_cv,      'examen escrito'),
+            'examen_pendiente':      (enviar_correo_avance_cv,      'examen escrito'),
+            'examen_en_curso':       (enviar_correo_avance_cv,      'examen escrito'),
+
+            'examen_aprobado':       (enviar_correo_avance_examen,  'entrevista con IA'),
+            'entrevista_pendiente':  (enviar_correo_avance_examen,  'entrevista con IA'),
+            'entrevista_en_curso':   (enviar_correo_avance_examen,  'entrevista con IA'),
+
+            'entrevista_completada': (enviar_correo_finalista,      'resultado de finalista'),
+            'finalista':             (enviar_correo_finalista,      'resultado de finalista'),
+        }
+
+        if candidato.estado not in mapa_estados:
+            return Response({
+                'error': f'No hay un correo de reenvío disponible para el estado actual "{candidato.get_estado_display()}".'
+            }, status=400)
+
+        funcion_correo, etiqueta_etapa = mapa_estados[candidato.estado]
+
+        enviado = funcion_correo(candidato)
+
+        if not enviado:
+            return Response({
+                'error': 'No se pudo enviar el correo. Revisa los logs del servidor.'
+            }, status=500)
+
+        return Response({
+            'mensaje': f'Correo de "{etiqueta_etapa}" reenviado a {candidato.email}.',
+            'etapa':   etiqueta_etapa,
+        })
+
 
     # ------------------------------------------
     # MARCAR FINALISTAS
