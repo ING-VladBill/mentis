@@ -8,7 +8,7 @@ import logging
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
-
+from django.core.mail import EmailMultiAlternatives
 from candidatos.models import TokenAcceso
 
 logger = logging.getLogger(__name__)
