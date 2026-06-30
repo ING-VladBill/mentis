@@ -31,7 +31,6 @@ google-generativeai==0.8.3
 
 # Utilidades
 requests==2.32.3
-resend==2.10.0               # API HTTP de correo (reemplaza SMTP bloqueado por Railway)
 python-dateutil==2.9.0.post0
 
 # ---- Producción ----

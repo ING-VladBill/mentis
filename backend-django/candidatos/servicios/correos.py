@@ -466,37 +466,21 @@ def enviar_correo_confirmacion_postulacion(candidato) -> bool:
 def _enviar_correo(destinatario: str, nombre: str, asunto: str,
                    cuerpo_texto: str, cuerpo_html: str) -> bool:
     """
-    Envía un correo usando la API HTTP de Resend (no SMTP).
-    Railway bloquea los puertos SMTP (465/587) en planes Trial/Hobby,
-    así que usamos la API REST de Resend que va por HTTPS (puerto 443).
- 
-    Variables de entorno requeridas:
-        RESEND_API_KEY  → obtenida en resend.com/api-keys
-        RESEND_FROM     → "MENTIS Reclutamiento <onboarding@resend.dev>"
-                          (o tu dominio verificado en Resend)
+    Envía un correo por SMTP (Gmail) con versión HTML + texto plano.
+    Remitente: DEFAULT_FROM_EMAIL (MENTIS Reclutamiento <mentis.reclutamiento@gmail.com>).
+    Funciona en local (la red permite SMTP). En Railway gratis el SMTP está bloqueado.
     """
-    import resend
- 
-    api_key = settings.MENTIS.get('RESEND_API_KEY', '')
-    from_email = settings.MENTIS.get('RESEND_FROM', 'MENTIS <onboarding@resend.dev>')
- 
-    if not api_key:
-        logger.error('RESEND_API_KEY no configurada. Correo no enviado.')
-        return False
- 
-    resend.api_key = api_key
- 
     try:
-        params = {
-            "from":    from_email,
-            "to":      [destinatario],
-            "subject": asunto,
-            "html":    cuerpo_html,
-            "text":    cuerpo_texto,
-        }
-        r = resend.Emails.send(params)
-        logger.info(f'Correo Resend enviado a {destinatario}: {asunto} (id={r.get("id", "?")})')
+        msg = EmailMultiAlternatives(
+            subject    = asunto,
+            body       = cuerpo_texto,
+            from_email = settings.DEFAULT_FROM_EMAIL,
+            to         = [destinatario],
+        )
+        msg.attach_alternative(cuerpo_html, 'text/html')
+        msg.send()
+        logger.info(f'Correo enviado a {destinatario}: {asunto}')
         return True
     except Exception as e:
-        logger.error(f'Error Resend enviando correo a {destinatario}: {e}')
+        logger.error(f'Error enviando correo a {destinatario}: {e}')
         return False
