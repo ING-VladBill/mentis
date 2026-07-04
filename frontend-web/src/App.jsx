@@ -273,28 +273,6 @@ function Topbar({ title, subtitle }) {
         <div style={{ fontSize: 15.5, fontWeight: 600, color: t.text }}>{title}</div>
         {subtitle && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>{subtitle}</div>}
       </div>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        background: t.toggleBg, border: `1px solid ${t.cardBorder}`,
-        borderRadius: 8, padding: '7px 13px',
-        fontSize: 13, color: t.textFaint, minWidth: 210,
-      }}>
-        <i className="ti ti-search" style={{ fontSize: 14 }} />
-        <span>Buscar vacantes, candidatos...</span>
-      </div>
-      <div style={{
-        width: 34, height: 34, borderRadius: 8,
-        background: t.toggleBg, border: `1px solid ${t.cardBorder}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: t.textMuted, position: 'relative',
-      }}>
-        <i className="ti ti-bell" style={{ fontSize: 16 }} />
-        <div style={{
-          position: 'absolute', top: 7, right: 7,
-          width: 6, height: 6, borderRadius: '50%',
-          background: '#7c3aed', border: `1.5px solid ${t.topbar}`,
-        }} />
-      </div>
     </header>
   );
 }
