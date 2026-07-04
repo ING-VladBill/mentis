@@ -37,7 +37,7 @@ function RolBadge({ rol }) {
 function ModalCrear({ t, onClose, onCreado }) {
   const [form, setForm] = useState({
     nombre: '', apellidos: '', email: '',
-    rol: 'reclutador', area_responsable: '', telefono: '+51 ',
+    rol: 'reclutador', telefono: '+51 ',
   });
   const [areas, setAreas]   = useState([]);
   const [saving, setSave]   = useState(false);
@@ -140,21 +140,6 @@ function ModalCrear({ t, onClose, onCreado }) {
                 placeholder="+51 999 999 999"
               />
             </div>
-          </div>
-
-          {/* Área */}
-          <div>
-            <label style={{ display: 'block', fontSize: 12, color: t.textMuted, marginBottom: 5 }}>Área responsable</label>
-            <select
-              value={form.area_responsable}
-              onChange={e => setForm(p => ({...p, area_responsable: e.target.value}))}
-              style={{ ...inp, cursor: 'pointer' }}
-            >
-              <option value="">— Selecciona un área —</option>
-              {areas.map(a => (
-                <option key={a.id} value={a.nombre}>[{a.codigo_corto}] {a.nombre}</option>
-              ))}
-            </select>
           </div>
 
           {/* Botones */}
@@ -398,7 +383,7 @@ export default function Usuarios() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${t.cardBorder}` }}>
-              {['Usuario', 'Email', 'Rol', 'Área', 'Estado', 'Acciones'].map(h => (
+              {['Usuario', 'Email', 'Rol', 'Estado', 'Acciones'].map(h => (
                 <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: t.textFaint, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
               ))}
             </tr>
@@ -428,7 +413,6 @@ export default function Usuarios() {
                   </td>
                   <td style={{ padding: '13px 16px', fontSize: 13, color: t.textMuted }}>{u.email}</td>
                   <td style={{ padding: '13px 16px' }}><RolBadge rol={u.rol} /></td>
-                  <td style={{ padding: '13px 16px', fontSize: 13, color: t.textMuted }}>{u.area_responsable || '—'}</td>
                   <td style={{ padding: '13px 16px' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500, background: u.is_active ? 'rgba(52,211,153,0.1)' : 'rgba(107,114,128,0.1)', color: u.is_active ? '#34d399' : '#6b7280', border: u.is_active ? '1px solid rgba(52,211,153,0.2)' : '1px solid rgba(107,114,128,0.2)' }}>
                       <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />

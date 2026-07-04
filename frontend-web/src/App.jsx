@@ -19,6 +19,7 @@ import CargaMasiva    from './pages/CargaMasiva';
 import Postular       from './pages/Postular';
 import Evaluaciones   from './pages/Evaluaciones';
 import ExamenDetalle  from './pages/ExamenDetalle';
+import Auditoria      from './pages/Auditoria';
 // ─── Portal candidato — descomenta cuando copies la carpeta src/pages/candidato/ ──
 import AccesoCandidato      from './pages/candidato/Acceso';
 import ExamenInstrucciones  from './pages/candidato/ExamenInstrucciones';
@@ -89,20 +90,20 @@ function Sidebar() {
     : nombre.slice(0, 2).toUpperCase();
 
   const NAV_MAIN = [
-    { to: '/vacantes',     icon: 'ti-briefcase',    label: 'Vacantes'     },
-    { to: '/candidatos',   icon: 'ti-users',        label: 'Candidatos'   },
+    { to: '/vacantes',     icon: 'ti-briefcase',      label: 'Vacantes'     },
+    { to: '/candidatos',   icon: 'ti-users',          label: 'Candidatos'   },
     { to: '/evaluaciones', icon: 'ti-clipboard-list', label: 'Evaluaciones' },
-    { to: '/ranking',      icon: 'ti-trophy',       label: 'Ranking'      },
-    { to: '/carga-masiva', icon: 'ti-files',        label: 'Carga masiva' },
-    { to: '/areas',        icon: 'ti-layout-grid',  label: 'Áreas'        },
-    { to: '/usuarios',     icon: 'ti-users-group',  label: 'Usuarios'     },
+    { to: '/auditoria',    icon: 'ti-shield-check',   label: 'Auditoría'    },
+    { to: '/ranking',      icon: 'ti-trophy',         label: 'Ranking'      },
+    { to: '/carga-masiva', icon: 'ti-files',          label: 'Carga masiva' },
+    { to: '/areas',        icon: 'ti-layout-grid',    label: 'Áreas'        },
+    { to: '/usuarios',     icon: 'ti-users-group',    label: 'Usuarios'     },
   ];
 
   const NAV_SOON = [
-    { icon: 'ti-robot',        label: 'Entrevistas IA' },
-    { icon: 'ti-chart-bar',    label: 'Resultados'     },
-    { icon: 'ti-shield-check', label: 'Auditoría'      },
-    { icon: 'ti-settings',     label: 'Configuración'  },
+    { icon: 'ti-robot',     label: 'Entrevistas IA' },
+    { icon: 'ti-chart-bar', label: 'Resultados'     },
+    { icon: 'ti-settings',  label: 'Configuración'  },
   ];
 
   async function handleLogout() {
@@ -284,6 +285,7 @@ const PAGE_META = {
   '/candidatos':           { title: 'Candidatos',          subtitle: 'Listado de todos los postulantes' },
   '/candidatos/registrar': { title: 'Registrar candidato', subtitle: 'Agregar nuevo postulante' },
   '/evaluaciones':         { title: 'Evaluaciones',        subtitle: 'Exámenes técnicos de candidatos' },
+  '/auditoria':            { title: 'Auditoría',           subtitle: 'Integridad de exámenes y eventos de proctoring' },
   '/carga-masiva':         { title: 'Carga masiva',        subtitle: 'Sube múltiples CVs en un solo lote' },
   '/areas':                { title: 'Áreas',               subtitle: 'Gestión de áreas y etiquetas' },
   '/usuarios':             { title: 'Usuarios',            subtitle: 'Equipo de recursos humanos' },
@@ -328,6 +330,7 @@ function Layout() {
             <Route path="/ranking"               element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
             <Route path="/evaluaciones"          element={<ProtectedRoute><Evaluaciones /></ProtectedRoute>} />
             <Route path="/evaluaciones/:id"      element={<ProtectedRoute><ExamenDetalle /></ProtectedRoute>} />
+            <Route path="/auditoria"             element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
             <Route path="/carga-masiva"          element={<ProtectedRoute><CargaMasiva /></ProtectedRoute>} />
             <Route path="/areas"                 element={<ProtectedRoute><Areas /></ProtectedRoute>} />
             <Route path="/usuarios"              element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />

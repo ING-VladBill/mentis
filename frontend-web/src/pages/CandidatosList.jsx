@@ -261,7 +261,7 @@ export default function CandidatosList() {
               {lista.map((c, i) => {
                 const cls = CLASIFICACION_CFG[c.clasificacion_ia];
                 const estaAnalizando = analizando[c.id];
-                const puedeAnalizar  = ['postulado', 'cv_rechazado'].includes(c.estado);
+                const puedeAnalizar = !['cv_analizando', 'contratado'].includes(c.estado);
                 const nombreParts    = (c.nombre_completo || '').split(' ');
 
                 return (
