@@ -1,5 +1,7 @@
 package com.mentis.app.presentation.examen
 
+import android.app.Activity
+import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -26,17 +29,27 @@ fun ExamenScreen(
     val uiState by viewModel.uiState.collectAsState()
     var mostrarConfirmacionFinalizar by remember { mutableStateOf(false) }
 
+    // Bloquea capturas de pantalla y grabación solo mientras dura el examen
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val window = (context as? Activity)?.window
+        window?.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
+                // "perdida_foco" es el tipo que el backend clasifica en la auditoría
                 Lifecycle.Event.ON_STOP -> viewModel.registrarEvento(
-                    tipo = "app_segundo_plano",
+                    tipo = "perdida_foco",
                     detalle = "El candidato salió de la app durante el examen"
-                )
-                Lifecycle.Event.ON_RESUME -> viewModel.registrarEvento(
-                    tipo = "app_reanudada",
-                    detalle = "El candidato volvió a la app"
                 )
                 else -> Unit
             }

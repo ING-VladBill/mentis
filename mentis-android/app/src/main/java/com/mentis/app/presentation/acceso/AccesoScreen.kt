@@ -71,12 +71,12 @@ fun AccesoScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Ingresa tu token de acceso",
+                        text = "Ingresa el código de acceso",
                         style = MaterialTheme.typography.titleLarge,
                         color = MentisOnSurface
                     )
                     Text(
-                        text = "Encuéntralo en el correo que recibiste del equipo de reclutamiento.",
+                        text = "Ingresa el código que recibiste en tu correo.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MentisSubtext
                     )
@@ -84,11 +84,13 @@ fun AccesoScreen(
                     OutlinedTextField(
                         value = tokenInput,
                         onValueChange = {
-                            tokenInput = it
+                            // El código corto es en mayúsculas; el backend ya normaliza,
+                            // pero así evitamos errores de tipeo del candidato.
+                            tokenInput = if (it.uppercase().startsWith("MENTIS")) it.uppercase() else it
                             viewModel.limpiarError()
                         },
-                        label = { Text("Token UUID") },
-                        placeholder = { Text("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx") },
+                        label = { Text("Código de acceso") },
+                        placeholder = { Text("MENTIS-XXXX-XXXX") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         isError = uiState.errorMessage != null,
