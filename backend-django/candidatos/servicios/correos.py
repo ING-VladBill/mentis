@@ -380,7 +380,6 @@ def enviar_correo_avance_examen(candidato) -> bool:
 
     {_boton('Iniciar entrevista IA', link, color=COLOR_ACCENT)}
     {_link_alternativo(link)}
-    {_bloque_codigo(token.codigo_corto)}
 
     <p style="margin:24px 0 0; color:{COLOR_TEXT_MUTED}; font-size:14px; line-height:1.6; text-align:center;">Sé tú mismo/a y responde con calma. ¡Confía en tu experiencia! 🚀</p>
     """
