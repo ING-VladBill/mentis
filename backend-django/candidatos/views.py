@@ -1,5 +1,5 @@
 # ==========================================
-# candidatos/views.py (Sprint 2 - completo)
+# candidatos/views.py 
 # ==========================================
 
 import threading
@@ -265,11 +265,18 @@ class CandidatoViewSet(viewsets.ModelViewSet):
             else:
                 fallidos += 1
 
+        # IMPORTANTE: el lote SIEMPRE se "procesó" exitosamente como petición HTTP,
+        # incluso si todos los archivos individuales fallaron (ej: CVs corruptos).
+        # Por eso usamos siempre un status 2xx: así el frontend (axios) entra al
+        # camino de "éxito" y muestra el detalle por archivo en todos los casos,
+        # en vez de perder esa información en un manejo de error genérico.
+        # Un 400 real queda reservado para peticiones mal formadas (sin vacante_id,
+        # sin archivos, archivos no-PDF), que ya se validan más arriba.
         return Response({
             'total': len(archivos), 'exitosos': exitosos, 'fallidos': fallidos,
             'detalle': resultados,
             'mensaje': f'Se procesaron {exitosos} CVs correctamente. {fallidos} tuvieron errores.',
-        }, status=201 if exitosos > 0 else 400)
+        }, status=201 if fallidos == 0 else 200)
 
     # ------------------------------------------
     # RANKING

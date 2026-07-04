@@ -107,7 +107,7 @@ class Candidato(models.Model):
     # CONTACTO
     # ------------------------------------------
     email    = models.EmailField()
-    telefono = models.CharField(max_length=20, blank=True)
+    telefono = models.CharField(max_length=20, null=True, blank=True)
     ciudad   = models.CharField(max_length=100, blank=True)
     pais     = models.CharField(max_length=100, default='Perú')
     linkedin = models.URLField(blank=True)
