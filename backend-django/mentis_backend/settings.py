@@ -182,6 +182,9 @@ CORS_ALLOW_HEADERS = [
 # EMAIL - Gmail SMTP
 # ------------------------------------------
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Clave compartida para llamadas internas entre backends (Spring Boot -> Django)
+INTERNAL_SERVICE_KEY = os.getenv('INTERNAL_SERVICE_KEY', '')
+
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True

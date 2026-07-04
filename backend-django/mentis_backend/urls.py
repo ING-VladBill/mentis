@@ -12,7 +12,7 @@ from vacantes.views import (
     VacanteViewSet, AreaViewSet,
     formulario_publico_info, formulario_publico_postular,
 )
-from candidatos.views import CandidatoViewSet, TagViewSet
+from candidatos.views import CandidatoViewSet, TagViewSet, notificar_avance_examen
 from autenticacion.views import (
     LoginRRHHView, RefreshTokenView, logout_view,
     validar_token_acceso, registro_candidato_con_token,
@@ -29,6 +29,7 @@ router.register(r'candidatos', CandidatoViewSet, basename='candidato')
 router.register(r'tags',       TagViewSet,       basename='tag')
 
 urlpatterns = [
+    path('api/interno/candidatos/<int:candidato_id>/notificar-avance-examen/', notificar_avance_examen, name='notificar-avance-examen'),
     path('admin/', admin.site.urls),
 
     # ------------------------------------------

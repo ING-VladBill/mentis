@@ -63,6 +63,41 @@ class TagViewSet(viewsets.ModelViewSet):
 # CANDIDATO VIEWSET
 # ==========================================
 
+from django.conf import settings as django_settings
+from rest_framework.decorators import api_view, permission_classes as drf_permission_classes
+from rest_framework.permissions import AllowAny
+
+
+@api_view(['POST'])
+@drf_permission_classes([AllowAny])
+def notificar_avance_examen(request, candidato_id):
+    """
+    Endpoint interno llamado por el Spring Boot justo después de calificar un examen.
+    Envía automáticamente el correo correspondiente (entrevista si aprobó).
+    Protegido con una clave compartida (lo llama otro backend, no un navegador).
+    """
+    clave_recibida = request.headers.get('X-Internal-Key', '')
+    clave_esperada = getattr(django_settings, 'INTERNAL_SERVICE_KEY', '')
+    if not clave_esperada or clave_recibida != clave_esperada:
+        return Response({'error': 'No autorizado.'}, status=401)
+
+    try:
+        candidato = Candidato.objects.get(id=candidato_id)
+    except Candidato.DoesNotExist:
+        return Response({'error': 'Candidato no encontrado.'}, status=404)
+
+    if candidato.estado != 'examen_aprobado':
+        return Response({'mensaje': f'Sin acción: estado actual es "{candidato.estado}".'})
+
+    from .servicios.correos import enviar_correo_avance_examen
+    enviado = enviar_correo_avance_examen(candidato)
+
+    if not enviado:
+        return Response({'error': 'No se pudo enviar el correo de entrevista.'}, status=500)
+
+    return Response({'mensaje': f'Correo de entrevista enviado a {candidato.email}.'})
+
+
 class CandidatoViewSet(viewsets.ModelViewSet):
     parser_classes  = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -218,7 +253,12 @@ class CandidatoViewSet(viewsets.ModelViewSet):
         resultados = []
         exitosos = fallidos = 0
         for archivo in archivos:
-            res = procesar_cv_individual(archivo, vacante_id, request.user)
+            try:
+                res = procesar_cv_individual(archivo, vacante_id, request.user)
+            except Exception as e:
+                # Defensa final: un fallo inesperado en un archivo NO debe tumbar
+                # el resto de la carga masiva.
+                res = {'exito': False, 'error': f'Error inesperado: {e}', 'archivo': archivo.name}
             resultados.append(res)
             if res['exito']:
                 exitosos += 1

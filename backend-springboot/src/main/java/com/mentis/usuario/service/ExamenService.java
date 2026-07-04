@@ -11,6 +11,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -43,6 +47,14 @@ public class ExamenService {
     private final TokenAccesoRepository tokenRepo;
     private final EventoAuditoriaRepository eventoRepo;
     private final GeminiService gemini;
+
+    @Value("${django.base-url:http://localhost:8000}")
+    private String djangoBaseUrl;
+
+    @Value("${django.internal-key:}")
+    private String djangoInternalKey;
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${mentis.examen.duracion-minutos:45}")
     private int duracionMinutos;
@@ -153,7 +165,7 @@ public class ExamenService {
 
         long respondidas = examen.getPreguntas() == null ? 0 :
                 preguntaRepo.findByExamenIdOrderByOrdenAsc(examen.getId()).stream()
-                        .filter(q -> q.getRespondidaEn() != null).count();
+                .filter(q -> q.getRespondidaEn() != null).count();
 
         return Map.of(
                 "mensaje", "Respuesta guardada.",
@@ -215,6 +227,12 @@ public class ExamenService {
         c.setEstado(aprobado ? "examen_aprobado" : "examen_rechazado");
         recalcularScoreFinal(c);
         candidatoRepo.save(c);
+
+        // 4.1 Avisar a Django para que envíe el correo de la siguiente etapa
+        // (entrevista si aprobó). Si esta llamada falla, NO afecta la respuesta
+        // al candidato: el examen ya quedó cerrado; RRHH puede reenviar el correo
+        // manualmente desde el panel si hiciera falta.
+        notificarAvanceADjango(c.getId());
 
         // 5. Invalidar el token de acceso (un examen, un uso)
         tokenRepo.findAll().stream()
@@ -363,5 +381,23 @@ public class ExamenService {
             if (json == null || json.isBlank()) return List.of();
             return MAPPER.readValue(json, new TypeReference<List<String>>() {});
         } catch (Exception e) { return List.of(); }
+    }
+
+    /**
+     * Notifica a Django que este candidato terminó de calificarse, para que
+     * envíe el correo de la siguiente etapa (entrevista) si corresponde.
+     * Falla en silencio (solo loggea) para no romper el flujo del examen.
+     */
+    private void notificarAvanceADjango(Long candidatoId) {
+        try {
+            String url = djangoBaseUrl + "/api/interno/candidatos/" + candidatoId + "/notificar-avance-examen/";
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Key", djangoInternalKey);
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            restTemplate.postForEntity(url, request, String.class);
+            log.info("Notificación de avance enviada a Django para candidato {}", candidatoId);
+        } catch (RestClientException e) {
+            log.warn("No se pudo notificar a Django (candidato {}): {}", candidatoId, e.getMessage());
+        }
     }
 }

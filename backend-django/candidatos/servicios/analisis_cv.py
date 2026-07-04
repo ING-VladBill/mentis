@@ -249,12 +249,30 @@ def procesar_cv_individual(archivo_pdf, vacante_id: int, usuario_rrhh) -> dict:
     """
     Procesa un único PDF: extrae texto, extrae datos básicos con regex, crea candidato.
     Usado en la carga masiva.
+    Blindado: cualquier excepción inesperada en ESTE archivo se captura y se
+    reporta como fallo de ESTE archivo, sin tumbar el resto de la carga masiva.
     """
     from candidatos.models import Candidato
     from vacantes.models import Vacante
 
-    vacante = Vacante.objects.get(id=vacante_id)
-    texto   = extraer_texto_pdf(archivo_pdf)
+    try:
+        vacante = Vacante.objects.get(id=vacante_id)
+    except Vacante.DoesNotExist:
+        return {
+            'exito': False,
+            'error': 'La vacante indicada no existe.',
+            'archivo': archivo_pdf.name,
+        }
+
+    try:
+        texto = extraer_texto_pdf(archivo_pdf)
+    except Exception as e:
+        logger.error(f'Error extrayendo texto de {archivo_pdf.name}: {e}')
+        return {
+            'exito': False,
+            'error': 'No se pudo leer el PDF (archivo dañado o formato no soportado).',
+            'archivo': archivo_pdf.name,
+        }
 
     if not texto or len(texto.strip()) < 50:
         return {
@@ -283,17 +301,25 @@ def procesar_cv_individual(archivo_pdf, vacante_id: int, usuario_rrhh) -> dict:
         }
 
     # Crear candidato
-    candidato = Candidato.objects.create(
-        vacante           = vacante,
-        nombre            = datos_basicos.get('nombre', 'Nombre') or 'Nombre',
-        apellido_paterno  = datos_basicos.get('apellidos', 'Apellido') or 'Apellido',
-        email             = email,
-        telefono          = datos_basicos.get('telefono', ''),
-        cv                = archivo_pdf,
-        cv_texto_extraido = texto,
-        estado            = 'cv_analizando',
-        registrado_por    = usuario_rrhh,
-    )
+    try:
+        candidato = Candidato.objects.create(
+            vacante           = vacante,
+            nombre            = datos_basicos.get('nombre', 'Nombre') or 'Nombre',
+            apellido_paterno  = datos_basicos.get('apellidos', 'Apellido') or 'Apellido',
+            email             = email,
+            telefono          = datos_basicos.get('telefono', ''),
+            cv                = archivo_pdf,
+            cv_texto_extraido = texto,
+            estado            = 'cv_analizando',
+            registrado_por    = usuario_rrhh,
+        )
+    except Exception as e:
+        logger.error(f'Error creando candidato desde {archivo_pdf.name}: {e}')
+        return {
+            'exito': False,
+            'error': 'No se pudo crear el candidato (dato inválido en el CV).',
+            'archivo': archivo_pdf.name,
+        }
 
     # Lanzar análisis con IA en segundo plano (no bloquea la carga masiva).
     # Igual que el formulario público y el buzón IMAP.
