@@ -51,16 +51,16 @@ class PreguntaExamen(models.Model):
     examen              = models.ForeignKey(Examen, on_delete=models.CASCADE, related_name='preguntas')
     orden               = models.IntegerField()
     tipo                = models.CharField(max_length=10, choices=TIPO_CHOICES, default='multiple')
-    categoria           = models.CharField(max_length=100, blank=True)
+    categoria           = models.CharField(max_length=100, null=True, blank=True)
     enunciado           = models.TextField()
-    opciones            = models.TextField(blank=True, help_text='JSON serializado: ["A","B","C","D"]. Vacío si es abierta.')
-    respuesta_correcta  = models.TextField(blank=True, help_text='MC: texto exacto de la opción. Abierta: criterios ideales.')
+    opciones            = models.TextField(null=True, blank=True, help_text='JSON serializado: ["A","B","C","D"]. Vacío si es abierta.')
+    respuesta_correcta  = models.TextField(null=True, blank=True, help_text='MC: texto exacto de la opción. Abierta: criterios ideales.')
     puntos              = models.IntegerField(default=2)
-    respuesta_candidato = models.TextField(blank=True)
+    respuesta_candidato = models.TextField(null=True, blank=True)
     respondida_en       = models.DateTimeField(null=True, blank=True)
     es_correcta         = models.BooleanField(null=True, blank=True)
     puntos_obtenidos    = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True)
-    feedback_ia         = models.TextField(blank=True)
+    feedback_ia         = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = 'preguntas_examen'
