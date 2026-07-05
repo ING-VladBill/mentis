@@ -358,6 +358,7 @@ def enviar_correo_avance_cv(candidato) -> bool:
 
 def enviar_correo_avance_examen(candidato) -> bool:
     token = generar_token_acceso(candidato, tipo='entrevista')
+    duracion = min(getattr(candidato.vacante, 'duracion_minutos_entrevista', 30) or 30, 40)
     link  = token.get_url()
     horas = settings.MENTIS['TOKEN_ACCESO_EXPIRACION_HORAS']
     asunto = f'¡Superaste el examen! Siguiente etapa · {candidato.vacante.titulo}'
@@ -372,9 +373,9 @@ def enviar_correo_avance_examen(candidato) -> bool:
     </p>
 
     {_info_box('Detalles de la entrevista', [
-        '🎙️ &nbsp;Conversación por voz con la IA',
-        '💬 &nbsp;5 a 7 preguntas dinámicas adaptadas a ti',
-        '⏱️ &nbsp;Duración estimada: 20-30 minutos',
+        '🎙️ &nbsp;Una conversación por voz con E.V.A., nuestra entrevistadora IA',
+        '💬 &nbsp;Sin cuestionarios: es una charla natural sobre ti y tu experiencia',
+        f'⏱️ &nbsp;Duración máxima: {duracion} minutos',
         f'⏳ &nbsp;Link válido por {horas} horas',
     ], color=COLOR_ACCENT)}
 

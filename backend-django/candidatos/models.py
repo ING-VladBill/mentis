@@ -222,6 +222,12 @@ class Candidato(models.Model):
     # ------------------------------------------
     # AUDITORÍA
     # ------------------------------------------
+    # --- Banco de talento y descarte (Sprint 4) ---
+    en_banco_talento   = models.BooleanField(default=False,
+                            help_text='Candidato valioso guardado para futuras vacantes')
+    motivo_descarte    = models.TextField(blank=True,
+                            help_text='Razón registrada al descartar al candidato')
+
     fecha_postulacion  = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
     registrado_por     = models.ForeignKey(

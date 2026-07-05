@@ -349,6 +349,62 @@ class CandidatoViewSet(viewsets.ModelViewSet):
 
 
     # ------------------------------------------
+    # BANCO DE TALENTO (S4-18)
+    # ------------------------------------------
+    @action(detail=True, methods=['post'], url_path='banco-talento')
+    def toggle_banco_talento(self, request, pk=None):
+        """Agrega o quita al candidato del banco de talento."""
+        candidato = self.get_object()
+        candidato.en_banco_talento = not candidato.en_banco_talento
+        candidato.save(update_fields=['en_banco_talento'])
+        return Response({
+            'en_banco_talento': candidato.en_banco_talento,
+            'mensaje': ('Agregado al banco de talento.' if candidato.en_banco_talento
+                        else 'Retirado del banco de talento.'),
+        })
+
+    @action(detail=False, methods=['get'], url_path='banco-talento')
+    def listar_banco_talento(self, request):
+        """
+        Lista el banco de talento con filtros por score:
+        ?score_min=70&habilidad=python&area_id=2
+        """
+        qs = Candidato.objects.filter(en_banco_talento=True).select_related('vacante', 'vacante__area')
+        score_min = request.query_params.get('score_min')
+        if score_min:
+            qs = qs.filter(score_cv__gte=int(score_min))
+        habilidad = request.query_params.get('habilidad')
+        if habilidad:
+            qs = qs.filter(habilidades_detectadas__icontains=habilidad)
+        area_id = request.query_params.get('area_id')
+        if area_id:
+            qs = qs.filter(vacante__area_id=area_id)
+        data = [{
+            'id': c.id, 'nombre_completo': c.nombre_completo, 'email': c.email,
+            'vacante_original': c.vacante.titulo if c.vacante else None,
+            'score_cv': c.score_cv, 'score_examen': float(c.score_examen) if c.score_examen else None,
+            'score_entrevista': float(c.score_entrevista) if c.score_entrevista else None,
+            'score_final': float(c.score_final) if c.score_final else None,
+            'habilidades': c.habilidades_detectadas, 'estado': c.estado,
+        } for c in qs.order_by('-score_final', '-score_cv')]
+        return Response({'total': len(data), 'candidatos': data})
+
+    # ------------------------------------------
+    # MOTIVO DE DESCARTE (S4-20)
+    # ------------------------------------------
+    @action(detail=True, methods=['post'], url_path='descartar')
+    def descartar(self, request, pk=None):
+        """Descarta al candidato registrando el motivo (obligatorio)."""
+        candidato = self.get_object()
+        motivo = (request.data.get('motivo') or '').strip()
+        if not motivo:
+            return Response({'error': 'El motivo de descarte es obligatorio.'}, status=400)
+        candidato.motivo_descarte = motivo
+        candidato.estado = 'descartado'
+        candidato.save(update_fields=['motivo_descarte', 'estado'])
+        return Response({'mensaje': f'Candidato descartado. Motivo registrado.', 'estado': 'descartado'})
+
+    # ------------------------------------------
     # MARCAR FINALISTAS
     # ------------------------------------------
     @action(detail=False, methods=['post'], url_path='marcar-finalistas')

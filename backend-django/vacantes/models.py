@@ -249,6 +249,18 @@ class Vacante(models.Model):
     # ------------------------------------------
     score_cv_minimo           = models.IntegerField(default=60, help_text='Score mínimo del CV para avanzar al examen (0-100)')
     nota_minima_examen        = models.DecimalField(max_digits=4, decimal_places=2, default=13.00)
+
+    # --- Entrevista IA (Sprint 4) ---
+    duracion_minutos_entrevista = models.PositiveIntegerField(
+        default=30,
+        help_text='Duración de la entrevista IA en minutos. Techo del sistema: 40. '
+                  'Sugerencia: practicante 15-20, junior 20-25, mid 25-30, senior 35-40.'
+    )
+    plantilla_evaluacion = models.ForeignKey(
+        'evaluaciones.PlantillaEvaluacion', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='vacantes',
+        help_text='Plantilla de dimensiones para la entrevista IA. Si es null, se elige automáticamente por área.'
+    )
     top_candidatos_finalistas = models.IntegerField(default=5)
 
     # ------------------------------------------
