@@ -62,8 +62,8 @@ export default function AccesoCandidato() {
       </div>
 
       <div style={{ ...s.card, animation: 'fadeSlideUp 320ms cubic-bezier(0.23,1,0.32,1) 80ms both' }}>
-        <h1 style={s.title}>Acceso al examen</h1>
-        <p style={s.sub}>Ingresa el código de acceso que recibiste en tu correo, o usa el enlace directo que te enviamos.</p>
+        <h1 style={s.title}>Acceso a tu proceso</h1>
+        <p style={s.sub}>Ingresa el código que recibiste en tu correo, o usa el enlace directo que te enviamos. Te llevaremos a tu examen o entrevista según corresponda.</p>
 
         {error && (
           <div style={s.errorBox}>
@@ -108,7 +108,7 @@ export default function AccesoCandidato() {
           >
             {loading
               ? <><span style={s.spinner} /> Verificando...</>
-              : <>Ingresar al examen <i className="ti ti-arrow-right" style={{ fontSize: 16 }} /></>
+              : <>Continuar <i className="ti ti-arrow-right" style={{ fontSize: 16 }} /></>
             }
           </button>
         </form>

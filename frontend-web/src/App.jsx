@@ -2,7 +2,7 @@ import {
   BrowserRouter, Routes, Route, NavLink,
   useLocation, useNavigate, Navigate,
 } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 
 import VacantesList   from './pages/VacantesList';
@@ -16,6 +16,7 @@ import Usuarios       from './pages/Usuarios';
 import Areas          from './pages/Areas';
 import Ranking        from './pages/Ranking';
 import BancoTalento         from './pages/BancoTalento';
+import EntrevistasIA        from './pages/EntrevistasIA';
 import CargaMasiva    from './pages/CargaMasiva';
 import Postular       from './pages/Postular';
 import Evaluaciones   from './pages/Evaluaciones';
@@ -28,6 +29,7 @@ import Examen               from './pages/candidato/Examen';
 import ExamenFinalizado     from './pages/candidato/ExamenFinalizado';
 import Progreso             from './pages/candidato/Progreso';
 import SesionExpirada       from './pages/candidato/SesionExpirada';
+import EntrevistaVoz        from './pages/candidato/EntrevistaVoz';
 import RedireccionadorCandidato from './pages/RedireccionadorCandidato';
 import ProtectedRoute from './components/ProtectedRoute';
 import api            from './services/api';
@@ -90,16 +92,19 @@ function Sidebar() {
     ? `${partes[0][0]}${partes[1][0]}`.toUpperCase()
     : nombre.slice(0, 2).toUpperCase();
 
+  const esAdmin = (usuario.rol === 'admin');
   const NAV_MAIN = [
-    { to: '/vacantes',     icon: 'ti-briefcase',      label: 'Vacantes'     },
-    { to: '/candidatos',   icon: 'ti-users',          label: 'Candidatos'   },
-    { to: '/evaluaciones', icon: 'ti-clipboard-list', label: 'Evaluaciones' },
-    { to: '/auditoria',    icon: 'ti-shield-check',   label: 'Auditoría'    },
-    { to: '/ranking',      icon: 'ti-trophy',         label: 'Ranking'      },
-    { to: '/banco-talento', icon: 'ti-star',          label: 'Banco de talento' },
-    { to: '/carga-masiva', icon: 'ti-files',          label: 'Carga masiva' },
-    { to: '/areas',        icon: 'ti-layout-grid',    label: 'Áreas'        },
-    { to: '/usuarios',     icon: 'ti-users-group',    label: 'Usuarios'     },
+    { to: '/vacantes',      icon: 'ti-briefcase',      label: 'Vacantes'        },
+    { to: '/candidatos',    icon: 'ti-users',          label: 'Candidatos'      },
+    { to: '/evaluaciones',  icon: 'ti-clipboard-list', label: 'Evaluaciones'    },
+    { to: '/entrevistas',   icon: 'ti-robot',          label: 'Entrevistas IA'  },
+    { to: '/auditoria',     icon: 'ti-shield-check',   label: 'Auditoría'       },
+    { to: '/ranking',       icon: 'ti-trophy',         label: 'Ranking'         },
+    { to: '/banco-talento', icon: 'ti-star',           label: 'Banco de talento'},
+    { to: '/carga-masiva',  icon: 'ti-files',          label: 'Carga masiva'    },
+    { to: '/areas',         icon: 'ti-layout-grid',    label: 'Áreas'           },
+    // "Usuarios" solo lo ve el administrador (superuser)
+    ...(esAdmin ? [{ to: '/usuarios', icon: 'ti-users-group', label: 'Usuarios' }] : []),
   ];
 
 
@@ -248,7 +253,84 @@ function Topbar({ title, subtitle }) {
         <div style={{ fontSize: 15.5, fontWeight: 600, color: t.text }}>{title}</div>
         {subtitle && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>{subtitle}</div>}
       </div>
+      <CampanaNotificaciones t={t} />
     </header>
+  );
+}
+
+// ─── Campana de notificaciones (alertas de RRHH: riesgo alto, etc.) ───────────
+function CampanaNotificaciones({ t }) {
+  const [abierto, setAbierto] = useState(false);
+  const [notis, setNotis] = useState([]);
+  const [noLeidas, setNoLeidas] = useState(0);
+  const navigate = useNavigate();
+
+  const cargar = React.useCallback(() => {
+    api.get('/api/notificaciones/no-leidas/')
+      .then(({ data }) => { setNotis(data.notificaciones || []); setNoLeidas(data.total || 0); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    cargar();
+    const id = setInterval(cargar, 60000); // refrescar cada minuto
+    return () => clearInterval(id);
+  }, [cargar]);
+
+  async function abrir(n) {
+    try { await api.post(`/api/notificaciones/${n.id}/marcar-leida/`); } catch { /* ok */ }
+    setAbierto(false);
+    cargar();
+    if (n.candidato) navigate(`/candidatos/${n.candidato}`);
+  }
+
+  async function marcarTodas() {
+    try { await api.post('/api/notificaciones/marcar-todas-leidas/'); } catch { /* ok */ }
+    cargar();
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setAbierto(a => !a)} title="Notificaciones"
+        style={{ position: 'relative', width: 40, height: 40, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: 'transparent', color: t.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <i className="ti ti-bell" style={{ fontSize: 18 }} />
+        {noLeidas > 0 && (
+          <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: '#ef4444', color: '#fff', fontSize: 10.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {noLeidas > 9 ? '9+' : noLeidas}
+          </span>
+        )}
+      </button>
+      {abierto && (
+        <>
+          <div onClick={() => setAbierto(false)} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
+          <div style={{ position: 'absolute', top: 48, right: 0, width: 340, maxHeight: 440, overflowY: 'auto', background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 14, boxShadow: '0 16px 44px rgba(0,0,0,0.22)', zIndex: 100, animation: 'notiPop 0.18s ease both' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: `1px solid ${t.cardBorder}` }}>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: t.text }}>Notificaciones</span>
+              {noLeidas > 0 && <button onClick={marcarTodas} style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>Marcar todas</button>}
+            </div>
+            {notis.length === 0 ? (
+              <div style={{ padding: '32px 20px', textAlign: 'center', color: t.textMuted, fontSize: 13 }}>
+                <i className="ti ti-check" style={{ fontSize: 26, color: t.textFaint, display: 'block', marginBottom: 8 }} />
+                Todo al día
+              </div>
+            ) : notis.map(n => (
+              <div key={n.id} onClick={() => abrir(n)}
+                style={{ padding: '13px 16px', borderBottom: `1px solid ${t.cardBorder}`, cursor: 'pointer', display: 'flex', gap: 11, transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = t.rowHover}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: n.tipo === 'riesgo_examen' ? 'rgba(239,68,68,0.12)' : 'rgba(124,58,237,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <i className={n.tipo === 'riesgo_examen' ? 'ti ti-alert-triangle' : 'ti ti-bell'} style={{ fontSize: 16, color: n.tipo === 'riesgo_examen' ? '#ef4444' : '#7c3aed' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: t.text, marginBottom: 2 }}>{n.titulo}</div>
+                  <div style={{ fontSize: 11.5, color: t.textMuted, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.mensaje}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -261,6 +343,7 @@ const PAGE_META = {
   '/evaluaciones':         { title: 'Evaluaciones',        subtitle: 'Exámenes técnicos de candidatos' },
   '/auditoria':            { title: 'Auditoría',           subtitle: 'Integridad de exámenes y eventos de proctoring' },
   '/banco-talento':        { title: 'Banco de talento',    subtitle: 'Candidatos destacados guardados para futuras vacantes' },
+  '/entrevistas':          { title: 'Entrevistas IA',      subtitle: 'Resultados y auditoría de las entrevistas con EVA' },
   '/carga-masiva':         { title: 'Carga masiva',        subtitle: 'Sube múltiples CVs en un solo lote' },
   '/areas':                { title: 'Áreas',               subtitle: 'Gestión de áreas y etiquetas' },
   '/usuarios':             { title: 'Usuarios',            subtitle: 'Equipo de recursos humanos' },
@@ -304,6 +387,7 @@ function Layout() {
             <Route path="/candidatos/:id"        element={<ProtectedRoute><CandidatoDetalle /></ProtectedRoute>} />
             <Route path="/ranking"               element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
             <Route path="/banco-talento"         element={<ProtectedRoute><BancoTalento /></ProtectedRoute>} />
+            <Route path="/entrevistas"           element={<ProtectedRoute><EntrevistasIA /></ProtectedRoute>} />
             <Route path="/evaluaciones"          element={<ProtectedRoute><Evaluaciones /></ProtectedRoute>} />
             <Route path="/evaluaciones/:id"      element={<ProtectedRoute><ExamenDetalle /></ProtectedRoute>} />
             <Route path="/auditoria"             element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
@@ -322,6 +406,7 @@ function PortalCandidato() {
   return (
     <Routes>
       <Route path="acceso"        element={<AccesoCandidato />} />
+      <Route path="entrevista"    element={<EntrevistaVoz />} />
       <Route path="instrucciones" element={<ExamenInstrucciones />} />
       <Route path="examen"        element={<Examen />} />
       <Route path="finalizado"    element={<ExamenFinalizado />} />
@@ -362,6 +447,7 @@ export default function App() {
     @keyframes slideUp { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
     @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.4 } }
     body { margin: 0; }
+    @keyframes notiPop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.15)'}; border-radius: 3px; }

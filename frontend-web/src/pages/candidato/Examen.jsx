@@ -341,10 +341,6 @@ export default function Examen() {
           <Timer segundos={examen.segundos_restantes} onExpira={onTimerExpira} />
         )}
 
-        {/* Finalizar */}
-        <button onClick={() => setConfirm(true)} style={{ padding: '8px 18px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <i className="ti ti-send" style={{ fontSize: 15 }} /> Finalizar examen
-        </button>
       </header>
 
       <div style={{ maxWidth: 840, margin: '0 auto', padding: '28px 20px', display: 'grid', gridTemplateColumns: '1fr 220px', gap: 24, alignItems: 'start' }}>
@@ -400,15 +396,25 @@ export default function Examen() {
               >
                 <i className="ti ti-arrow-left" /> Anterior
               </button>
-              <button
-                onClick={() => irAPregunta(Math.min(preguntas.length - 1, pregActual + 1))}
-                disabled={pregActual === preguntas.length - 1}
-                style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, cursor: pregActual === preguntas.length - 1 ? 'not-allowed' : 'pointer', opacity: pregActual === preguntas.length - 1 ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontWeight: 600, transition: 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)' }}
-                onMouseDown={e => { if (pregActual !== preguntas.length - 1) e.currentTarget.style.transform = 'scale(0.97)'; }}
-                onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-              >
-                Siguiente <i className="ti ti-arrow-right" />
-              </button>
+              {pregActual === preguntas.length - 1 ? (
+                <button
+                  onClick={() => setConfirm(true)}
+                  style={{ padding: '10px 22px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontSize: 13.5, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontWeight: 700, transition: 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)', boxShadow: '0 4px 14px rgba(16,185,129,0.35)' }}
+                  onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.97)'; }}
+                  onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+                >
+                  <i className="ti ti-send" /> Finalizar examen
+                </button>
+              ) : (
+                <button
+                  onClick={() => irAPregunta(pregActual + 1)}
+                  style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 13.5, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontWeight: 600, transition: 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)' }}
+                  onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.97)'; }}
+                  onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+                >
+                  Siguiente <i className="ti ti-arrow-right" />
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -416,7 +422,7 @@ export default function Examen() {
         {/* Panel lateral — mapa de preguntas */}
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: '20px' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>Preguntas</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 36px)', gap: 8, justifyContent: 'space-between' }}>
             {preguntas.map((p, i) => {
               const respondida = !!respuestas[p.id]?.trim();
               const esActual   = i === pregActual;

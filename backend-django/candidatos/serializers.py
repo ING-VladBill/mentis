@@ -1,5 +1,5 @@
 # ==========================================
-# candidatos/serializers.py (Sprint 2 - completo)
+# candidatos/serializers.py (Sprint 4 - completo)
 # ==========================================
 
 from rest_framework import serializers
@@ -46,12 +46,19 @@ class CandidatoListSerializer(serializers.ModelSerializer):
 
 
 class CandidatoDetalleSerializer(serializers.ModelSerializer):
-    nombre_completo  = serializers.ReadOnlyField()
-    estado_display   = serializers.CharField(source='get_estado_display', read_only=True)
-    vacante_titulo   = serializers.CharField(source='vacante.titulo', read_only=True)
-    vacante_area     = serializers.CharField(source='vacante.area.nombre', read_only=True)
-    tags             = TagSerializer(many=True, read_only=True)
-    notas            = NotaCandidatoSerializer(many=True, read_only=True)
+    nombre_completo    = serializers.ReadOnlyField()
+    estado_display     = serializers.CharField(source='get_estado_display', read_only=True)
+    vacante_titulo     = serializers.CharField(source='vacante.titulo', read_only=True)
+    vacante_area       = serializers.CharField(source='vacante.area.nombre', read_only=True)
+    tags               = TagSerializer(many=True, read_only=True)
+    notas              = NotaCandidatoSerializer(many=True, read_only=True)
+    registrado_por_nombre = serializers.SerializerMethodField()
+
+    def get_registrado_por_nombre(self, obj):
+        u = obj.registrado_por
+        if not u:
+            return 'Sistema (carga masiva)'
+        return getattr(u, 'nombre_completo', None) or getattr(u, 'nombre', None) or u.email
 
     class Meta:
         model  = Candidato

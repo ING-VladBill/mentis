@@ -83,7 +83,7 @@ export default function EntrevistaPanel({ candidatoId, t }) {
 
   if (loading || !entrevista || entrevista.estado !== 'finalizada') return null;
 
-  const card = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14 };
+  const card = { background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 14 };
   const dims = entrevista.analisis_dimensiones || {};
   const nombresDims = Object.keys(dims);
   const notaColor = (v) => v >= 14 ? '#10b981' : v >= 11 ? '#f59e0b' : '#ef4444';

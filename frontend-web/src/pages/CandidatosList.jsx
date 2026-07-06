@@ -130,8 +130,31 @@ export default function CandidatosList() {
     rechazados: candidatos.filter(c => ['cv_rechazado','examen_rechazado','descartado'].includes(c.estado)).length,
   };
 
+  // Cada etapa agrupa su estado "exacto" MÁS los estados que implican haberla
+  // superado. Ej: "Postulado" incluye a todos (todos postularon); "Examen
+  // pendiente" incluye a quien está en examen o más adelante. Los estados
+  // negativos/terminales (rechazos, descartado, contratado, finalista) son
+  // match exacto porque son ramas, no etapas de avance.
+  const GRUPOS_FILTRO = {
+    postulado: ['postulado','cv_analizando','cv_aprobado','examen_pendiente','examen_en_curso',
+                'examen_aprobado','entrevista_pendiente','entrevista_en_curso','entrevista_completada',
+                'finalista','entrevista_presencial','contratado'],
+    cv_aprobado: ['cv_aprobado','examen_pendiente','examen_en_curso','examen_aprobado',
+                  'entrevista_pendiente','entrevista_en_curso','entrevista_completada',
+                  'finalista','entrevista_presencial','contratado'],
+    examen_pendiente: ['examen_pendiente','examen_en_curso'],
+    cv_rechazado: ['cv_rechazado'],
+    finalista: ['finalista'],
+    contratado: ['contratado'],
+    descartado: ['descartado','examen_rechazado'],
+  };
+
   const lista = candidatos
-    .filter(c => filtro === 'todos' || c.estado === filtro)
+    .filter(c => {
+      if (filtro === 'todos') return true;
+      const grupo = GRUPOS_FILTRO[filtro];
+      return grupo ? grupo.includes(c.estado) : c.estado === filtro;
+    })
     .filter(c => {
       if (!busqueda) return true;
       const q = busqueda.toLowerCase();

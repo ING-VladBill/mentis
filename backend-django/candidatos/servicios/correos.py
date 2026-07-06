@@ -507,3 +507,57 @@ def _enviar_correo(destinatario: str, nombre: str, asunto: str,
     except Exception as e:
         logger.error(f'Error enviando correo a {destinatario}: {e}')
         return False
+
+
+def enviar_correo_alerta_riesgo_rrhh(candidato, puntaje_riesgo: int) -> bool:
+    """
+    Alerta a todo el equipo de RRHH (admins + reclutadores) cuando un candidato
+    aprueba el examen pero con RIESGO ALTO de auditoría. La entrevista queda
+    retenida para revisión manual.
+    """
+    from django.contrib.auth import get_user_model
+    Usuario = get_user_model()
+
+    destinatarios = list(
+        Usuario.objects.filter(rol__in=['admin', 'reclutador'], is_active=True)
+        .exclude(email='').values_list('email', 'nombre')
+    )
+    if not destinatarios:
+        return False
+
+    frontend = settings.MENTIS['FRONTEND_URL']
+    link_ficha = f'{frontend}/candidatos/{candidato.id}'
+    asunto = f'⚠️ Revisar examen · {candidato.nombre_completo} (riesgo alto)'
+
+    contenido = f"""
+    <h1 class="h1" style="margin:0 0 12px; color:{COLOR_TEXT}; font-size:24px; font-weight:800; line-height:1.25;">Examen aprobado con riesgo alto ⚠️</h1>
+    <p style="margin:0 0 16px; color:{COLOR_TEXT_MUTED}; font-size:15px; line-height:1.7;">
+      <strong style="color:{COLOR_TEXT};">{candidato.nombre_completo}</strong> aprobó el examen técnico para el puesto de
+      <strong style="color:{COLOR_TEXT};">{candidato.vacante.titulo}</strong>, pero la auditoría antifraude detectó
+      múltiples conductas sospechosas (puntaje de riesgo <strong style="color:#DC2626;">{puntaje_riesgo}</strong>).
+    </p>
+    <p style="margin:0 0 8px; color:{COLOR_TEXT_MUTED}; font-size:15px; line-height:1.7;">
+      Por seguridad, <strong style="color:{COLOR_TEXT};">la entrevista con EVA NO se envió automáticamente</strong>.
+      Revisa el detalle del examen y, si consideras que el candidato debe continuar, reenvía la etapa
+      manualmente desde su ficha.
+    </p>
+
+    {_boton('Revisar ficha del candidato', link_ficha, color='#DC2626')}
+    {_link_alternativo(link_ficha)}
+    """
+
+    html = _layout(
+        preheader=f'{candidato.nombre_completo} aprobó con riesgo alto — requiere revisión',
+        header_gradient='linear-gradient(135deg,#DC2626,#B91C1C)',
+        badge_emoji='⚠️', badge_texto='REVISIÓN REQUERIDA',
+        contenido=contenido,
+    )
+    texto = (f'{candidato.nombre_completo} aprobó el examen de "{candidato.vacante.titulo}" con riesgo alto '
+             f'(puntaje {puntaje_riesgo}). La entrevista no se envió automáticamente. '
+             f'Revisa su ficha: {link_ficha}')
+
+    ok = True
+    for email, nombre in destinatarios:
+        enviado = _enviar_correo(email, nombre, asunto, texto, html)
+        ok = ok and enviado
+    return ok

@@ -89,13 +89,61 @@ def notificar_avance_examen(request, candidato_id):
     if candidato.estado != 'examen_aprobado':
         return Response({'mensaje': f'Sin acción: estado actual es "{candidato.estado}".'})
 
-    from .servicios.correos import enviar_correo_avance_examen
-    enviado = enviar_correo_avance_examen(candidato)
+    from .servicios.correos import enviar_correo_avance_examen, enviar_correo_alerta_riesgo_rrhh
+    from .models import Notificacion
 
+    # --- Regla de negocio: si el examen tuvo RIESGO ALTO de auditoría, NO se
+    # envía la entrevista automáticamente. Queda en revisión manual de RRHH. ---
+    puntaje_riesgo = _calcular_riesgo_examen(candidato)
+
+    if puntaje_riesgo is not None and puntaje_riesgo > 18:  # umbral 'rojo'
+        # 1) Notificación interna (campana del sistema)
+        Notificacion.objects.create(
+            tipo='riesgo_examen',
+            titulo=f'Revisar examen de {candidato.nombre_completo}',
+            mensaje=(f'{candidato.nombre_completo} aprobó el examen de "{candidato.vacante.titulo}", '
+                     f'pero la auditoría detectó RIESGO ALTO (puntaje {puntaje_riesgo}). '
+                     'La entrevista NO se envió automáticamente: revisa el examen y, si procede, '
+                     'reenvía la etapa manualmente desde su ficha.'),
+            candidato=candidato,
+        )
+        # 2) Correo a los reclutadores/admins
+        try:
+            enviar_correo_alerta_riesgo_rrhh(candidato, puntaje_riesgo)
+        except Exception as e:
+            logging.getLogger(__name__).warning(f'No se pudo enviar alerta de riesgo a RRHH: {e}')
+
+        return Response({
+            'mensaje': 'Examen aprobado con riesgo alto. Retenido para revisión manual de RRHH.',
+            'riesgo': puntaje_riesgo,
+            'correo_entrevista_enviado': False,
+        })
+
+    # Riesgo aceptable -> flujo normal: enviar la entrevista
+    enviado = enviar_correo_avance_examen(candidato)
     if not enviado:
         return Response({'error': 'No se pudo enviar el correo de entrevista.'}, status=500)
 
-    return Response({'mensaje': f'Correo de entrevista enviado a {candidato.email}.'})
+    return Response({
+        'mensaje': f'Correo de entrevista enviado a {candidato.email}.',
+        'correo_entrevista_enviado': True,
+    })
+
+
+def _calcular_riesgo_examen(candidato):
+    """
+    Suma el puntaje de riesgo de auditoría del examen del candidato.
+    Mismo criterio que el endpoint de auditoría (baja=1, media=3, alta=6).
+    Devuelve None si no hay examen con eventos.
+    """
+    PESOS = {'baja': 1, 'media': 3, 'alta': 6}
+    examen = getattr(candidato, 'examen', None)
+    if not examen:
+        return None
+    total = 0
+    for e in examen.eventos.all():
+        total += PESOS.get(e.severidad or 'baja', 1)
+    return total
 
 
 class CandidatoViewSet(viewsets.ModelViewSet):
@@ -533,3 +581,49 @@ def _enviar_correo_async(candidato):
         except Exception as e:
             logger.error(f'Error enviando correo: {e}')
     threading.Thread(target=_enviar, daemon=True).start()
+
+
+# ==========================================================
+# NOTIFICACIONES INTERNAS (campana del sistema para RRHH)
+# ==========================================================
+from rest_framework import serializers as _serializers
+from .models import Notificacion
+
+
+class NotificacionSerializer(_serializers.ModelSerializer):
+    candidato_nombre = _serializers.CharField(source='candidato.nombre_completo', read_only=True, default=None)
+    tipo_display     = _serializers.CharField(source='get_tipo_display', read_only=True)
+
+    class Meta:
+        model  = Notificacion
+        fields = ['id', 'tipo', 'tipo_display', 'titulo', 'mensaje',
+                  'candidato', 'candidato_nombre', 'leida', 'creada']
+
+
+class NotificacionViewSet(viewsets.ModelViewSet):
+    """Notificaciones para RRHH: listar, marcar como leídas."""
+    serializer_class = NotificacionSerializer
+    queryset = Notificacion.objects.select_related('candidato').all()
+
+    def get_permissions(self):
+        return [EsReclutadorOAdmin()]
+
+    @action(detail=False, methods=['get'], url_path='no-leidas')
+    def no_leidas(self, request):
+        qs = self.get_queryset().filter(leida=False)
+        return Response({
+            'total': qs.count(),
+            'notificaciones': NotificacionSerializer(qs[:20], many=True).data,
+        })
+
+    @action(detail=True, methods=['post'], url_path='marcar-leida')
+    def marcar_leida(self, request, pk=None):
+        notif = self.get_object()
+        notif.leida = True
+        notif.save(update_fields=['leida'])
+        return Response({'ok': True})
+
+    @action(detail=False, methods=['post'], url_path='marcar-todas-leidas')
+    def marcar_todas_leidas(self, request):
+        self.get_queryset().filter(leida=False).update(leida=True)
+        return Response({'ok': True})

@@ -55,7 +55,7 @@ export default function BancoTalento() {
   const scoreColor = (v) => v == null ? t.textFaint : v >= 14 ? '#10b981' : v >= 11 ? '#f59e0b' : '#ef4444';
 
   const card = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+    background: t.card, border: `1px solid ${t.cardBorder}`,
     borderRadius: 14, animation: 'fadeInUp 0.35s ease both',
   };
   const input = {
@@ -146,8 +146,11 @@ export default function BancoTalento() {
 
               <button title="Quitar del banco de talento" disabled={quitandoId === c.id}
                 onClick={(e) => { e.stopPropagation(); quitar(c); }}
-                style={{ width: 38, height: 38, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: 'rgba(245,158,11,0.12)', color: '#f59e0b', cursor: 'pointer', fontSize: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <i className={quitandoId === c.id ? 'ti ti-loader-2' : 'ti ti-star-filled'} style={quitandoId === c.id ? { animation: 'spin 1s linear infinite' } : {}} />
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.14)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)'; e.currentTarget.style.color = '#ef4444'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = t.toggleBg; e.currentTarget.style.borderColor = t.cardBorder; e.currentTarget.style.color = t.textMuted; }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.toggleBg, color: t.textMuted, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, flexShrink: 0, transition: 'all 0.15s ease', fontFamily: 'inherit' }}>
+                <i className={quitandoId === c.id ? 'ti ti-loader-2' : 'ti ti-star-off'} style={{ fontSize: 15, ...(quitandoId === c.id ? { animation: 'spin 1s linear infinite' } : {}) }} />
+                {quitandoId === c.id ? 'Quitando…' : 'Quitar'}
               </button>
             </div>
           ))}

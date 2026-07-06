@@ -1,5 +1,5 @@
 # ==========================================
-# candidatos/models.py (Sprint 2 - completo)
+# candidatos/models.py (Sprint 4 - completo)
 # ==========================================
 
 import uuid
@@ -350,3 +350,30 @@ class TokenAcceso(models.Model):
         self.fecha_uso = timezone.now()
         self.ip_uso = ip
         self.save()
+
+
+class Notificacion(models.Model):
+    """
+    Notificaciones internas para el equipo de RRHH (campana del sistema).
+    Ej: un candidato aprobó el examen pero con riesgo alto de auditoría y
+    quedó en espera de revisión manual antes de enviarle la entrevista.
+    """
+    TIPO_CHOICES = [
+        ('riesgo_examen',   'Examen con riesgo alto'),
+        ('entrevista_lista','Entrevista completada'),
+        ('general',         'General'),
+    ]
+    tipo        = models.CharField(max_length=30, choices=TIPO_CHOICES, default='general')
+    titulo      = models.CharField(max_length=200)
+    mensaje     = models.TextField(blank=True)
+    candidato   = models.ForeignKey('Candidato', on_delete=models.CASCADE,
+                                    null=True, blank=True, related_name='notificaciones')
+    leida       = models.BooleanField(default=False)
+    creada      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'notificaciones'
+        ordering = ['-creada']
+
+    def __str__(self):
+        return f'[{self.get_tipo_display()}] {self.titulo}'
