@@ -1,0 +1,39 @@
+com.mentis.app.test.app-jetified-savedstate-ktx-1.2.1-0 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\0a7e266c35dce9e87d3f5ade2b073aad\transformed\jetified-savedstate-ktx-1.2.1\res
+com.mentis.app.test.app-jetified-lifecycle-process-2.8.7-1 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\0c84499d2d270c71e4bdf5766b4b4b3b\transformed\jetified-lifecycle-process-2.8.7\res
+com.mentis.app.test.app-core-1.15.0-2 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\12dd2a6e0f190284ccc69b243d320105\transformed\core-1.15.0\res
+com.mentis.app.test.app-jetified-emoji2-1.3.0-3 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\15be8ca032e18ceeffdd3923da8aad0a\transformed\jetified-emoji2-1.3.0\res
+com.mentis.app.test.app-jetified-annotation-experimental-1.4.1-4 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\1d842dd6871f5bcdc7c841983cf23c15\transformed\jetified-annotation-experimental-1.4.1\res
+com.mentis.app.test.app-jetified-core-ktx-1.15.0-5 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\2a33406fbb3381c94bdbf55a59738585\transformed\jetified-core-ktx-1.15.0\res
+com.mentis.app.test.app-jetified-savedstate-1.2.1-6 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\35b517feadf78ff0f38558924835d975\transformed\jetified-savedstate-1.2.1\res
+com.mentis.app.test.app-jetified-ui-test-junit4-release-7 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\3965a674778165f1f1d6946a1ab7bc81\transformed\jetified-ui-test-junit4-release\res
+com.mentis.app.test.app-jetified-ui-geometry-release-8 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\44e9c934d5791f50d176b911d3c2f396\transformed\jetified-ui-geometry-release\res
+com.mentis.app.test.app-jetified-tracing-1.2.0-9 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\48ba290bc21bfcdd96bd5aa7210d05e2\transformed\jetified-tracing-1.2.0\res
+com.mentis.app.test.app-jetified-profileinstaller-1.4.0-10 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\6d7c694ff48c23e9146c439e2c5bbcdc\transformed\jetified-profileinstaller-1.4.0\res
+com.mentis.app.test.app-core-runtime-2.2.0-11 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\78f3b46f5dac27fc137b90e2a6837380\transformed\core-runtime-2.2.0\res
+com.mentis.app.test.app-jetified-runtime-saveable-release-12 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\7ac97ea1d694aee88a46affc5a18c6f7\transformed\jetified-runtime-saveable-release\res
+com.mentis.app.test.app-jetified-ui-release-13 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\80b6d31d2b407f8a15a2ed72382443af\transformed\jetified-ui-release\res
+com.mentis.app.test.app-jetified-customview-poolingcontainer-1.0.0-14 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\8f8684c91ddb76b5bebacbd5a58dc4cc\transformed\jetified-customview-poolingcontainer-1.0.0\res
+com.mentis.app.test.app-jetified-core-1.6.1-15 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\90a623628492913a061a4faca64ba04c\transformed\jetified-core-1.6.1\res
+com.mentis.app.test.app-jetified-lifecycle-runtime-release-16 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\9465c7e6d06bd4a788ab3b6a0cbec5fb\transformed\jetified-lifecycle-runtime-release\res
+com.mentis.app.test.app-jetified-ui-unit-release-17 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\9696d46efc7c715e06eeeb2b6eb268c3\transformed\jetified-ui-unit-release\res
+com.mentis.app.test.app-jetified-ui-util-release-18 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\99ed07b8de9bb0688afec76fd5d06893\transformed\jetified-ui-util-release\res
+com.mentis.app.test.app-jetified-lifecycle-runtime-ktx-release-19 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\9b619e523a447086409aa81a0a4ab8b2\transformed\jetified-lifecycle-runtime-ktx-release\res
+com.mentis.app.test.app-jetified-activity-1.10.1-20 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\9f58c00103661b690a883470c97d435e\transformed\jetified-activity-1.10.1\res
+com.mentis.app.test.app-jetified-lifecycle-runtime-compose-release-21 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\a23d96ae2b3c7dfd66cd180a4b1be952\transformed\jetified-lifecycle-runtime-compose-release\res
+com.mentis.app.test.app-jetified-activity-compose-1.10.1-22 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\aae6ce8262997fef9cdf11e5c140b4a2\transformed\jetified-activity-compose-1.10.1\res
+com.mentis.app.test.app-jetified-activity-ktx-1.10.1-23 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\ada652d61c8668463c1da0ee8edd9d68\transformed\jetified-activity-ktx-1.10.1\res
+com.mentis.app.test.app-jetified-ui-text-release-24 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\b4f939a0ecd71ba0d6f389b12afef796\transformed\jetified-ui-text-release\res
+com.mentis.app.test.app-jetified-lifecycle-viewmodel-ktx-2.8.7-25 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\b8780108180be452cc6ae4e36ad03ed2\transformed\jetified-lifecycle-viewmodel-ktx-2.8.7\res
+com.mentis.app.test.app-jetified-lifecycle-viewmodel-savedstate-2.8.7-26 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\b8b91e352970f8785e0e23d4cfba8a1a\transformed\jetified-lifecycle-viewmodel-savedstate-2.8.7\res
+com.mentis.app.test.app-jetified-startup-runtime-1.1.1-27 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\b9b082d28073577f6680db26b65d4c5a\transformed\jetified-startup-runtime-1.1.1\res
+com.mentis.app.test.app-jetified-graphics-path-1.0.1-28 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\dbb26a424096ac31ca2022bb79e542b3\transformed\jetified-graphics-path-1.0.1\res
+com.mentis.app.test.app-lifecycle-livedata-core-2.8.7-29 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\e23e6945e88b3000c27ea272139f1506\transformed\lifecycle-livedata-core-2.8.7\res
+com.mentis.app.test.app-jetified-core-viewtree-1.0.0-30 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\e32dc2a1b747b2a51537b6eed2cf56ac\transformed\jetified-core-viewtree-1.0.0\res
+com.mentis.app.test.app-jetified-lifecycle-viewmodel-release-31 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\e4c5bfabd20d096cf93a0ab269f18614\transformed\jetified-lifecycle-viewmodel-release\res
+com.mentis.app.test.app-jetified-ui-test-release-32 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\f0ea4da355dd703dd1d1d424a6d86f04\transformed\jetified-ui-test-release\res
+com.mentis.app.test.app-jetified-runtime-release-33 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\f62d074b26dad4981170905994cc87d2\transformed\jetified-runtime-release\res
+com.mentis.app.test.app-jetified-ui-graphics-release-34 C:\Users\HAROLD\.gradle\caches\9.0.0\transforms\f817f7578855def557c43862e9d1f0f4\transformed\jetified-ui-graphics-release\res
+com.mentis.app.test.app-androidTest-35 C:\Users\HAROLD\Documents\4ciclo - construccion y prueba de software\mentis\mentis-android\app\build\generated\res\resValues\androidTest\debug
+com.mentis.app.test.app-mergeDebugAndroidTestResources-36 C:\Users\HAROLD\Documents\4ciclo - construccion y prueba de software\mentis\mentis-android\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.mentis.app.test.app-mergeDebugAndroidTestResources-37 C:\Users\HAROLD\Documents\4ciclo - construccion y prueba de software\mentis\mentis-android\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.mentis.app.test.app-debugAndroidTest-38 C:\Users\HAROLD\Documents\4ciclo - construccion y prueba de software\mentis\mentis-android\app\build\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources

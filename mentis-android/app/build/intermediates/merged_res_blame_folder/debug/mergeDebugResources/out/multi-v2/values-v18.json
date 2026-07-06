@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.mentis.app-mergeDebugResources-76:/values-v18/values-v18.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\HAROLD\\.gradle\\caches\\9.0.0\\transforms\\fc0352ef33f77fac992dbc66d6dd34b8\\transformed\\appcompat-1.6.1\\res\\values-v18\\values-v18.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "48",
+                        "endOffsets": "99"
+                    }
+                }
+            ]
+        }
+    ]
+}

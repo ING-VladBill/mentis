@@ -1,0 +1,836 @@
+package com.mentis.app;
+
+import android.app.Activity;
+import android.app.Service;
+import android.view.View;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.SavedStateHandle;
+import androidx.lifecycle.ViewModel;
+import com.mentis.app.data.local.MentisDatabase;
+import com.mentis.app.data.local.dao.PreguntaDao;
+import com.mentis.app.data.local.datastore.TokenManager;
+import com.mentis.app.data.remote.api.MentisApi;
+import com.mentis.app.data.remote.api.VacantesApi;
+import com.mentis.app.data.remote.interceptor.AuthInterceptor;
+import com.mentis.app.data.repository.AuthRepositoryImpl;
+import com.mentis.app.data.repository.ExamenRepositoryImpl;
+import com.mentis.app.data.repository.ProgresoRepositoryImpl;
+import com.mentis.app.data.repository.VacantesRepositoryImpl;
+import com.mentis.app.di.DatabaseModule_ProvideMentisDatabaseFactory;
+import com.mentis.app.di.DatabaseModule_ProvidePreguntaDaoFactory;
+import com.mentis.app.di.NetworkModule_ProvideDjangoOkHttpClientFactory;
+import com.mentis.app.di.NetworkModule_ProvideDjangoRetrofitFactory;
+import com.mentis.app.di.NetworkModule_ProvideLoggingInterceptorFactory;
+import com.mentis.app.di.NetworkModule_ProvideMentisApiFactory;
+import com.mentis.app.di.NetworkModule_ProvideOkHttpClientFactory;
+import com.mentis.app.di.NetworkModule_ProvideRetrofitFactory;
+import com.mentis.app.di.NetworkModule_ProvideVacantesApiFactory;
+import com.mentis.app.domain.repository.AuthRepository;
+import com.mentis.app.domain.repository.ExamenRepository;
+import com.mentis.app.domain.repository.ProgresoRepository;
+import com.mentis.app.domain.repository.VacantesRepository;
+import com.mentis.app.domain.usecase.AccederUseCase;
+import com.mentis.app.domain.usecase.FinalizarExamenUseCase;
+import com.mentis.app.domain.usecase.GuardarRespuestaUseCase;
+import com.mentis.app.domain.usecase.IniciarExamenUseCase;
+import com.mentis.app.domain.usecase.ObtenerEstadoExamenUseCase;
+import com.mentis.app.domain.usecase.ObtenerProgresoUseCase;
+import com.mentis.app.domain.usecase.ObtenerVacantesPublicasUseCase;
+import com.mentis.app.domain.usecase.PostularUseCase;
+import com.mentis.app.domain.usecase.RegistrarEventoUseCase;
+import com.mentis.app.presentation.acceso.AccesoViewModel;
+import com.mentis.app.presentation.acceso.AccesoViewModel_HiltModules;
+import com.mentis.app.presentation.examen.ExamenViewModel;
+import com.mentis.app.presentation.examen.ExamenViewModel_HiltModules;
+import com.mentis.app.presentation.postular.PostularViewModel;
+import com.mentis.app.presentation.postular.PostularViewModel_HiltModules;
+import com.mentis.app.presentation.progreso.ProgresoViewModel;
+import com.mentis.app.presentation.progreso.ProgresoViewModel_HiltModules;
+import com.mentis.app.presentation.vacantes.VacantesViewModel;
+import com.mentis.app.presentation.vacantes.VacantesViewModel_HiltModules;
+import dagger.hilt.android.ActivityRetainedLifecycle;
+import dagger.hilt.android.ViewModelLifecycle;
+import dagger.hilt.android.internal.builders.ActivityComponentBuilder;
+import dagger.hilt.android.internal.builders.ActivityRetainedComponentBuilder;
+import dagger.hilt.android.internal.builders.FragmentComponentBuilder;
+import dagger.hilt.android.internal.builders.ServiceComponentBuilder;
+import dagger.hilt.android.internal.builders.ViewComponentBuilder;
+import dagger.hilt.android.internal.builders.ViewModelComponentBuilder;
+import dagger.hilt.android.internal.builders.ViewWithFragmentComponentBuilder;
+import dagger.hilt.android.internal.lifecycle.DefaultViewModelFactories;
+import dagger.hilt.android.internal.lifecycle.DefaultViewModelFactories_InternalFactoryFactory_Factory;
+import dagger.hilt.android.internal.managers.ActivityRetainedComponentManager_LifecycleModule_ProvideActivityRetainedLifecycleFactory;
+import dagger.hilt.android.internal.managers.SavedStateHandleHolder;
+import dagger.hilt.android.internal.modules.ApplicationContextModule;
+import dagger.hilt.android.internal.modules.ApplicationContextModule_ProvideContextFactory;
+import dagger.internal.DaggerGenerated;
+import dagger.internal.DoubleCheck;
+import dagger.internal.IdentifierNameString;
+import dagger.internal.KeepFieldType;
+import dagger.internal.LazyClassKeyMap;
+import dagger.internal.MapBuilder;
+import dagger.internal.Preconditions;
+import dagger.internal.Provider;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import javax.annotation.processing.Generated;
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Retrofit;
+
+@DaggerGenerated
+@Generated(
+    value = "dagger.internal.codegen.ComponentProcessor",
+    comments = "https://dagger.dev"
+)
+@SuppressWarnings({
+    "unchecked",
+    "rawtypes",
+    "KotlinInternal",
+    "KotlinInternalInJava",
+    "cast"
+})
+public final class DaggerMentisApplication_HiltComponents_SingletonC {
+  private DaggerMentisApplication_HiltComponents_SingletonC() {
+  }
+
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  public static final class Builder {
+    private ApplicationContextModule applicationContextModule;
+
+    private Builder() {
+    }
+
+    public Builder applicationContextModule(ApplicationContextModule applicationContextModule) {
+      this.applicationContextModule = Preconditions.checkNotNull(applicationContextModule);
+      return this;
+    }
+
+    public MentisApplication_HiltComponents.SingletonC build() {
+      Preconditions.checkBuilderRequirement(applicationContextModule, ApplicationContextModule.class);
+      return new SingletonCImpl(applicationContextModule);
+    }
+  }
+
+  private static final class ActivityRetainedCBuilder implements MentisApplication_HiltComponents.ActivityRetainedC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private SavedStateHandleHolder savedStateHandleHolder;
+
+    private ActivityRetainedCBuilder(SingletonCImpl singletonCImpl) {
+      this.singletonCImpl = singletonCImpl;
+    }
+
+    @Override
+    public ActivityRetainedCBuilder savedStateHandleHolder(
+        SavedStateHandleHolder savedStateHandleHolder) {
+      this.savedStateHandleHolder = Preconditions.checkNotNull(savedStateHandleHolder);
+      return this;
+    }
+
+    @Override
+    public MentisApplication_HiltComponents.ActivityRetainedC build() {
+      Preconditions.checkBuilderRequirement(savedStateHandleHolder, SavedStateHandleHolder.class);
+      return new ActivityRetainedCImpl(singletonCImpl, savedStateHandleHolder);
+    }
+  }
+
+  private static final class ActivityCBuilder implements MentisApplication_HiltComponents.ActivityC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private Activity activity;
+
+    private ActivityCBuilder(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+    }
+
+    @Override
+    public ActivityCBuilder activity(Activity activity) {
+      this.activity = Preconditions.checkNotNull(activity);
+      return this;
+    }
+
+    @Override
+    public MentisApplication_HiltComponents.ActivityC build() {
+      Preconditions.checkBuilderRequirement(activity, Activity.class);
+      return new ActivityCImpl(singletonCImpl, activityRetainedCImpl, activity);
+    }
+  }
+
+  private static final class FragmentCBuilder implements MentisApplication_HiltComponents.FragmentC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private Fragment fragment;
+
+    private FragmentCBuilder(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, ActivityCImpl activityCImpl) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+    }
+
+    @Override
+    public FragmentCBuilder fragment(Fragment fragment) {
+      this.fragment = Preconditions.checkNotNull(fragment);
+      return this;
+    }
+
+    @Override
+    public MentisApplication_HiltComponents.FragmentC build() {
+      Preconditions.checkBuilderRequirement(fragment, Fragment.class);
+      return new FragmentCImpl(singletonCImpl, activityRetainedCImpl, activityCImpl, fragment);
+    }
+  }
+
+  private static final class ViewWithFragmentCBuilder implements MentisApplication_HiltComponents.ViewWithFragmentC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private final FragmentCImpl fragmentCImpl;
+
+    private View view;
+
+    private ViewWithFragmentCBuilder(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, ActivityCImpl activityCImpl,
+        FragmentCImpl fragmentCImpl) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+      this.fragmentCImpl = fragmentCImpl;
+    }
+
+    @Override
+    public ViewWithFragmentCBuilder view(View view) {
+      this.view = Preconditions.checkNotNull(view);
+      return this;
+    }
+
+    @Override
+    public MentisApplication_HiltComponents.ViewWithFragmentC build() {
+      Preconditions.checkBuilderRequirement(view, View.class);
+      return new ViewWithFragmentCImpl(singletonCImpl, activityRetainedCImpl, activityCImpl, fragmentCImpl, view);
+    }
+  }
+
+  private static final class ViewCBuilder implements MentisApplication_HiltComponents.ViewC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private View view;
+
+    private ViewCBuilder(SingletonCImpl singletonCImpl, ActivityRetainedCImpl activityRetainedCImpl,
+        ActivityCImpl activityCImpl) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+    }
+
+    @Override
+    public ViewCBuilder view(View view) {
+      this.view = Preconditions.checkNotNull(view);
+      return this;
+    }
+
+    @Override
+    public MentisApplication_HiltComponents.ViewC build() {
+      Preconditions.checkBuilderRequirement(view, View.class);
+      return new ViewCImpl(singletonCImpl, activityRetainedCImpl, activityCImpl, view);
+    }
+  }
+
+  private static final class ViewModelCBuilder implements MentisApplication_HiltComponents.ViewModelC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private SavedStateHandle savedStateHandle;
+
+    private ViewModelLifecycle viewModelLifecycle;
+
+    private ViewModelCBuilder(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+    }
+
+    @Override
+    public ViewModelCBuilder savedStateHandle(SavedStateHandle handle) {
+      this.savedStateHandle = Preconditions.checkNotNull(handle);
+      return this;
+    }
+
+    @Override
+    public ViewModelCBuilder viewModelLifecycle(ViewModelLifecycle viewModelLifecycle) {
+      this.viewModelLifecycle = Preconditions.checkNotNull(viewModelLifecycle);
+      return this;
+    }
+
+    @Override
+    public MentisApplication_HiltComponents.ViewModelC build() {
+      Preconditions.checkBuilderRequirement(savedStateHandle, SavedStateHandle.class);
+      Preconditions.checkBuilderRequirement(viewModelLifecycle, ViewModelLifecycle.class);
+      return new ViewModelCImpl(singletonCImpl, activityRetainedCImpl, savedStateHandle, viewModelLifecycle);
+    }
+  }
+
+  private static final class ServiceCBuilder implements MentisApplication_HiltComponents.ServiceC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private Service service;
+
+    private ServiceCBuilder(SingletonCImpl singletonCImpl) {
+      this.singletonCImpl = singletonCImpl;
+    }
+
+    @Override
+    public ServiceCBuilder service(Service service) {
+      this.service = Preconditions.checkNotNull(service);
+      return this;
+    }
+
+    @Override
+    public MentisApplication_HiltComponents.ServiceC build() {
+      Preconditions.checkBuilderRequirement(service, Service.class);
+      return new ServiceCImpl(singletonCImpl, service);
+    }
+  }
+
+  private static final class ViewWithFragmentCImpl extends MentisApplication_HiltComponents.ViewWithFragmentC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private final FragmentCImpl fragmentCImpl;
+
+    private final ViewWithFragmentCImpl viewWithFragmentCImpl = this;
+
+    private ViewWithFragmentCImpl(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, ActivityCImpl activityCImpl,
+        FragmentCImpl fragmentCImpl, View viewParam) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+      this.fragmentCImpl = fragmentCImpl;
+
+
+    }
+  }
+
+  private static final class FragmentCImpl extends MentisApplication_HiltComponents.FragmentC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private final FragmentCImpl fragmentCImpl = this;
+
+    private FragmentCImpl(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, ActivityCImpl activityCImpl,
+        Fragment fragmentParam) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+
+
+    }
+
+    @Override
+    public DefaultViewModelFactories.InternalFactoryFactory getHiltInternalFactoryFactory() {
+      return activityCImpl.getHiltInternalFactoryFactory();
+    }
+
+    @Override
+    public ViewWithFragmentComponentBuilder viewWithFragmentComponentBuilder() {
+      return new ViewWithFragmentCBuilder(singletonCImpl, activityRetainedCImpl, activityCImpl, fragmentCImpl);
+    }
+  }
+
+  private static final class ViewCImpl extends MentisApplication_HiltComponents.ViewC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private final ViewCImpl viewCImpl = this;
+
+    private ViewCImpl(SingletonCImpl singletonCImpl, ActivityRetainedCImpl activityRetainedCImpl,
+        ActivityCImpl activityCImpl, View viewParam) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+
+
+    }
+  }
+
+  private static final class ActivityCImpl extends MentisApplication_HiltComponents.ActivityC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl = this;
+
+    private ActivityCImpl(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, Activity activityParam) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+
+
+    }
+
+    @Override
+    public void injectMainActivity(MainActivity mainActivity) {
+    }
+
+    @Override
+    public DefaultViewModelFactories.InternalFactoryFactory getHiltInternalFactoryFactory() {
+      return DefaultViewModelFactories_InternalFactoryFactory_Factory.newInstance(getViewModelKeys(), new ViewModelCBuilder(singletonCImpl, activityRetainedCImpl));
+    }
+
+    @Override
+    public Map<Class<?>, Boolean> getViewModelKeys() {
+      return LazyClassKeyMap.<Boolean>of(MapBuilder.<String, Boolean>newMapBuilder(5).put(LazyClassKeyProvider.com_mentis_app_presentation_acceso_AccesoViewModel, AccesoViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_mentis_app_presentation_examen_ExamenViewModel, ExamenViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_mentis_app_presentation_postular_PostularViewModel, PostularViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_mentis_app_presentation_progreso_ProgresoViewModel, ProgresoViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_mentis_app_presentation_vacantes_VacantesViewModel, VacantesViewModel_HiltModules.KeyModule.provide()).build());
+    }
+
+    @Override
+    public ViewModelComponentBuilder getViewModelComponentBuilder() {
+      return new ViewModelCBuilder(singletonCImpl, activityRetainedCImpl);
+    }
+
+    @Override
+    public FragmentComponentBuilder fragmentComponentBuilder() {
+      return new FragmentCBuilder(singletonCImpl, activityRetainedCImpl, activityCImpl);
+    }
+
+    @Override
+    public ViewComponentBuilder viewComponentBuilder() {
+      return new ViewCBuilder(singletonCImpl, activityRetainedCImpl, activityCImpl);
+    }
+
+    @IdentifierNameString
+    private static final class LazyClassKeyProvider {
+      static String com_mentis_app_presentation_vacantes_VacantesViewModel = "com.mentis.app.presentation.vacantes.VacantesViewModel";
+
+      static String com_mentis_app_presentation_examen_ExamenViewModel = "com.mentis.app.presentation.examen.ExamenViewModel";
+
+      static String com_mentis_app_presentation_progreso_ProgresoViewModel = "com.mentis.app.presentation.progreso.ProgresoViewModel";
+
+      static String com_mentis_app_presentation_postular_PostularViewModel = "com.mentis.app.presentation.postular.PostularViewModel";
+
+      static String com_mentis_app_presentation_acceso_AccesoViewModel = "com.mentis.app.presentation.acceso.AccesoViewModel";
+
+      @KeepFieldType
+      VacantesViewModel com_mentis_app_presentation_vacantes_VacantesViewModel2;
+
+      @KeepFieldType
+      ExamenViewModel com_mentis_app_presentation_examen_ExamenViewModel2;
+
+      @KeepFieldType
+      ProgresoViewModel com_mentis_app_presentation_progreso_ProgresoViewModel2;
+
+      @KeepFieldType
+      PostularViewModel com_mentis_app_presentation_postular_PostularViewModel2;
+
+      @KeepFieldType
+      AccesoViewModel com_mentis_app_presentation_acceso_AccesoViewModel2;
+    }
+  }
+
+  private static final class ViewModelCImpl extends MentisApplication_HiltComponents.ViewModelC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ViewModelCImpl viewModelCImpl = this;
+
+    private Provider<AccesoViewModel> accesoViewModelProvider;
+
+    private Provider<ExamenViewModel> examenViewModelProvider;
+
+    private Provider<PostularViewModel> postularViewModelProvider;
+
+    private Provider<ProgresoViewModel> progresoViewModelProvider;
+
+    private Provider<VacantesViewModel> vacantesViewModelProvider;
+
+    private ViewModelCImpl(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, SavedStateHandle savedStateHandleParam,
+        ViewModelLifecycle viewModelLifecycleParam) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+
+      initialize(savedStateHandleParam, viewModelLifecycleParam);
+
+    }
+
+    private AccederUseCase accederUseCase() {
+      return new AccederUseCase(singletonCImpl.bindAuthRepositoryProvider.get());
+    }
+
+    private IniciarExamenUseCase iniciarExamenUseCase() {
+      return new IniciarExamenUseCase(singletonCImpl.bindExamenRepositoryProvider.get());
+    }
+
+    private ObtenerEstadoExamenUseCase obtenerEstadoExamenUseCase() {
+      return new ObtenerEstadoExamenUseCase(singletonCImpl.bindExamenRepositoryProvider.get());
+    }
+
+    private GuardarRespuestaUseCase guardarRespuestaUseCase() {
+      return new GuardarRespuestaUseCase(singletonCImpl.bindExamenRepositoryProvider.get());
+    }
+
+    private FinalizarExamenUseCase finalizarExamenUseCase() {
+      return new FinalizarExamenUseCase(singletonCImpl.bindExamenRepositoryProvider.get());
+    }
+
+    private RegistrarEventoUseCase registrarEventoUseCase() {
+      return new RegistrarEventoUseCase(singletonCImpl.bindExamenRepositoryProvider.get());
+    }
+
+    private PostularUseCase postularUseCase() {
+      return new PostularUseCase(singletonCImpl.bindVacantesRepositoryProvider.get());
+    }
+
+    private ObtenerProgresoUseCase obtenerProgresoUseCase() {
+      return new ObtenerProgresoUseCase(singletonCImpl.bindProgresoRepositoryProvider.get());
+    }
+
+    private ObtenerVacantesPublicasUseCase obtenerVacantesPublicasUseCase() {
+      return new ObtenerVacantesPublicasUseCase(singletonCImpl.bindVacantesRepositoryProvider.get());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void initialize(final SavedStateHandle savedStateHandleParam,
+        final ViewModelLifecycle viewModelLifecycleParam) {
+      this.accesoViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
+      this.examenViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
+      this.postularViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
+      this.progresoViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 3);
+      this.vacantesViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 4);
+    }
+
+    @Override
+    public Map<Class<?>, javax.inject.Provider<ViewModel>> getHiltViewModelMap() {
+      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(MapBuilder.<String, javax.inject.Provider<ViewModel>>newMapBuilder(5).put(LazyClassKeyProvider.com_mentis_app_presentation_acceso_AccesoViewModel, ((Provider) accesoViewModelProvider)).put(LazyClassKeyProvider.com_mentis_app_presentation_examen_ExamenViewModel, ((Provider) examenViewModelProvider)).put(LazyClassKeyProvider.com_mentis_app_presentation_postular_PostularViewModel, ((Provider) postularViewModelProvider)).put(LazyClassKeyProvider.com_mentis_app_presentation_progreso_ProgresoViewModel, ((Provider) progresoViewModelProvider)).put(LazyClassKeyProvider.com_mentis_app_presentation_vacantes_VacantesViewModel, ((Provider) vacantesViewModelProvider)).build());
+    }
+
+    @Override
+    public Map<Class<?>, Object> getHiltViewModelAssistedMap() {
+      return Collections.<Class<?>, Object>emptyMap();
+    }
+
+    @IdentifierNameString
+    private static final class LazyClassKeyProvider {
+      static String com_mentis_app_presentation_acceso_AccesoViewModel = "com.mentis.app.presentation.acceso.AccesoViewModel";
+
+      static String com_mentis_app_presentation_vacantes_VacantesViewModel = "com.mentis.app.presentation.vacantes.VacantesViewModel";
+
+      static String com_mentis_app_presentation_postular_PostularViewModel = "com.mentis.app.presentation.postular.PostularViewModel";
+
+      static String com_mentis_app_presentation_examen_ExamenViewModel = "com.mentis.app.presentation.examen.ExamenViewModel";
+
+      static String com_mentis_app_presentation_progreso_ProgresoViewModel = "com.mentis.app.presentation.progreso.ProgresoViewModel";
+
+      @KeepFieldType
+      AccesoViewModel com_mentis_app_presentation_acceso_AccesoViewModel2;
+
+      @KeepFieldType
+      VacantesViewModel com_mentis_app_presentation_vacantes_VacantesViewModel2;
+
+      @KeepFieldType
+      PostularViewModel com_mentis_app_presentation_postular_PostularViewModel2;
+
+      @KeepFieldType
+      ExamenViewModel com_mentis_app_presentation_examen_ExamenViewModel2;
+
+      @KeepFieldType
+      ProgresoViewModel com_mentis_app_presentation_progreso_ProgresoViewModel2;
+    }
+
+    private static final class SwitchingProvider<T> implements Provider<T> {
+      private final SingletonCImpl singletonCImpl;
+
+      private final ActivityRetainedCImpl activityRetainedCImpl;
+
+      private final ViewModelCImpl viewModelCImpl;
+
+      private final int id;
+
+      SwitchingProvider(SingletonCImpl singletonCImpl, ActivityRetainedCImpl activityRetainedCImpl,
+          ViewModelCImpl viewModelCImpl, int id) {
+        this.singletonCImpl = singletonCImpl;
+        this.activityRetainedCImpl = activityRetainedCImpl;
+        this.viewModelCImpl = viewModelCImpl;
+        this.id = id;
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public T get() {
+        switch (id) {
+          case 0: // com.mentis.app.presentation.acceso.AccesoViewModel 
+          return (T) new AccesoViewModel(viewModelCImpl.accederUseCase());
+
+          case 1: // com.mentis.app.presentation.examen.ExamenViewModel 
+          return (T) new ExamenViewModel(viewModelCImpl.iniciarExamenUseCase(), viewModelCImpl.obtenerEstadoExamenUseCase(), viewModelCImpl.guardarRespuestaUseCase(), viewModelCImpl.finalizarExamenUseCase(), viewModelCImpl.registrarEventoUseCase());
+
+          case 2: // com.mentis.app.presentation.postular.PostularViewModel 
+          return (T) new PostularViewModel(viewModelCImpl.postularUseCase());
+
+          case 3: // com.mentis.app.presentation.progreso.ProgresoViewModel 
+          return (T) new ProgresoViewModel(viewModelCImpl.obtenerProgresoUseCase(), singletonCImpl.bindAuthRepositoryProvider.get());
+
+          case 4: // com.mentis.app.presentation.vacantes.VacantesViewModel 
+          return (T) new VacantesViewModel(viewModelCImpl.obtenerVacantesPublicasUseCase());
+
+          default: throw new AssertionError(id);
+        }
+      }
+    }
+  }
+
+  private static final class ActivityRetainedCImpl extends MentisApplication_HiltComponents.ActivityRetainedC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl = this;
+
+    private Provider<ActivityRetainedLifecycle> provideActivityRetainedLifecycleProvider;
+
+    private ActivityRetainedCImpl(SingletonCImpl singletonCImpl,
+        SavedStateHandleHolder savedStateHandleHolderParam) {
+      this.singletonCImpl = singletonCImpl;
+
+      initialize(savedStateHandleHolderParam);
+
+    }
+
+    @SuppressWarnings("unchecked")
+    private void initialize(final SavedStateHandleHolder savedStateHandleHolderParam) {
+      this.provideActivityRetainedLifecycleProvider = DoubleCheck.provider(new SwitchingProvider<ActivityRetainedLifecycle>(singletonCImpl, activityRetainedCImpl, 0));
+    }
+
+    @Override
+    public ActivityComponentBuilder activityComponentBuilder() {
+      return new ActivityCBuilder(singletonCImpl, activityRetainedCImpl);
+    }
+
+    @Override
+    public ActivityRetainedLifecycle getActivityRetainedLifecycle() {
+      return provideActivityRetainedLifecycleProvider.get();
+    }
+
+    private static final class SwitchingProvider<T> implements Provider<T> {
+      private final SingletonCImpl singletonCImpl;
+
+      private final ActivityRetainedCImpl activityRetainedCImpl;
+
+      private final int id;
+
+      SwitchingProvider(SingletonCImpl singletonCImpl, ActivityRetainedCImpl activityRetainedCImpl,
+          int id) {
+        this.singletonCImpl = singletonCImpl;
+        this.activityRetainedCImpl = activityRetainedCImpl;
+        this.id = id;
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public T get() {
+        switch (id) {
+          case 0: // dagger.hilt.android.ActivityRetainedLifecycle 
+          return (T) ActivityRetainedComponentManager_LifecycleModule_ProvideActivityRetainedLifecycleFactory.provideActivityRetainedLifecycle();
+
+          default: throw new AssertionError(id);
+        }
+      }
+    }
+  }
+
+  private static final class ServiceCImpl extends MentisApplication_HiltComponents.ServiceC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ServiceCImpl serviceCImpl = this;
+
+    private ServiceCImpl(SingletonCImpl singletonCImpl, Service serviceParam) {
+      this.singletonCImpl = singletonCImpl;
+
+
+    }
+  }
+
+  private static final class SingletonCImpl extends MentisApplication_HiltComponents.SingletonC {
+    private final ApplicationContextModule applicationContextModule;
+
+    private final SingletonCImpl singletonCImpl = this;
+
+    private Provider<TokenManager> tokenManagerProvider;
+
+    private Provider<HttpLoggingInterceptor> provideLoggingInterceptorProvider;
+
+    private Provider<OkHttpClient> provideOkHttpClientProvider;
+
+    private Provider<Retrofit> provideRetrofitProvider;
+
+    private Provider<MentisApi> provideMentisApiProvider;
+
+    private Provider<AuthRepositoryImpl> authRepositoryImplProvider;
+
+    private Provider<AuthRepository> bindAuthRepositoryProvider;
+
+    private Provider<MentisDatabase> provideMentisDatabaseProvider;
+
+    private Provider<PreguntaDao> providePreguntaDaoProvider;
+
+    private Provider<ExamenRepositoryImpl> examenRepositoryImplProvider;
+
+    private Provider<ExamenRepository> bindExamenRepositoryProvider;
+
+    private Provider<OkHttpClient> provideDjangoOkHttpClientProvider;
+
+    private Provider<Retrofit> provideDjangoRetrofitProvider;
+
+    private Provider<VacantesApi> provideVacantesApiProvider;
+
+    private Provider<VacantesRepositoryImpl> vacantesRepositoryImplProvider;
+
+    private Provider<VacantesRepository> bindVacantesRepositoryProvider;
+
+    private Provider<ProgresoRepositoryImpl> progresoRepositoryImplProvider;
+
+    private Provider<ProgresoRepository> bindProgresoRepositoryProvider;
+
+    private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
+      this.applicationContextModule = applicationContextModuleParam;
+      initialize(applicationContextModuleParam);
+
+    }
+
+    private AuthInterceptor authInterceptor() {
+      return new AuthInterceptor(tokenManagerProvider.get());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void initialize(final ApplicationContextModule applicationContextModuleParam) {
+      this.tokenManagerProvider = DoubleCheck.provider(new SwitchingProvider<TokenManager>(singletonCImpl, 4));
+      this.provideLoggingInterceptorProvider = DoubleCheck.provider(new SwitchingProvider<HttpLoggingInterceptor>(singletonCImpl, 5));
+      this.provideOkHttpClientProvider = DoubleCheck.provider(new SwitchingProvider<OkHttpClient>(singletonCImpl, 3));
+      this.provideRetrofitProvider = DoubleCheck.provider(new SwitchingProvider<Retrofit>(singletonCImpl, 2));
+      this.provideMentisApiProvider = DoubleCheck.provider(new SwitchingProvider<MentisApi>(singletonCImpl, 1));
+      this.authRepositoryImplProvider = new SwitchingProvider<>(singletonCImpl, 0);
+      this.bindAuthRepositoryProvider = DoubleCheck.provider((Provider) authRepositoryImplProvider);
+      this.provideMentisDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<MentisDatabase>(singletonCImpl, 8));
+      this.providePreguntaDaoProvider = DoubleCheck.provider(new SwitchingProvider<PreguntaDao>(singletonCImpl, 7));
+      this.examenRepositoryImplProvider = new SwitchingProvider<>(singletonCImpl, 6);
+      this.bindExamenRepositoryProvider = DoubleCheck.provider((Provider) examenRepositoryImplProvider);
+      this.provideDjangoOkHttpClientProvider = DoubleCheck.provider(new SwitchingProvider<OkHttpClient>(singletonCImpl, 12));
+      this.provideDjangoRetrofitProvider = DoubleCheck.provider(new SwitchingProvider<Retrofit>(singletonCImpl, 11));
+      this.provideVacantesApiProvider = DoubleCheck.provider(new SwitchingProvider<VacantesApi>(singletonCImpl, 10));
+      this.vacantesRepositoryImplProvider = new SwitchingProvider<>(singletonCImpl, 9);
+      this.bindVacantesRepositoryProvider = DoubleCheck.provider((Provider) vacantesRepositoryImplProvider);
+      this.progresoRepositoryImplProvider = new SwitchingProvider<>(singletonCImpl, 13);
+      this.bindProgresoRepositoryProvider = DoubleCheck.provider((Provider) progresoRepositoryImplProvider);
+    }
+
+    @Override
+    public void injectMentisApplication(MentisApplication mentisApplication) {
+    }
+
+    @Override
+    public Set<Boolean> getDisableFragmentGetContextFix() {
+      return Collections.<Boolean>emptySet();
+    }
+
+    @Override
+    public ActivityRetainedComponentBuilder retainedComponentBuilder() {
+      return new ActivityRetainedCBuilder(singletonCImpl);
+    }
+
+    @Override
+    public ServiceComponentBuilder serviceComponentBuilder() {
+      return new ServiceCBuilder(singletonCImpl);
+    }
+
+    private static final class SwitchingProvider<T> implements Provider<T> {
+      private final SingletonCImpl singletonCImpl;
+
+      private final int id;
+
+      SwitchingProvider(SingletonCImpl singletonCImpl, int id) {
+        this.singletonCImpl = singletonCImpl;
+        this.id = id;
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public T get() {
+        switch (id) {
+          case 0: // com.mentis.app.data.repository.AuthRepositoryImpl 
+          return (T) new AuthRepositoryImpl(singletonCImpl.provideMentisApiProvider.get(), singletonCImpl.tokenManagerProvider.get());
+
+          case 1: // com.mentis.app.data.remote.api.MentisApi 
+          return (T) NetworkModule_ProvideMentisApiFactory.provideMentisApi(singletonCImpl.provideRetrofitProvider.get());
+
+          case 2: // retrofit2.Retrofit 
+          return (T) NetworkModule_ProvideRetrofitFactory.provideRetrofit(singletonCImpl.provideOkHttpClientProvider.get());
+
+          case 3: // okhttp3.OkHttpClient 
+          return (T) NetworkModule_ProvideOkHttpClientFactory.provideOkHttpClient(singletonCImpl.authInterceptor(), singletonCImpl.provideLoggingInterceptorProvider.get());
+
+          case 4: // com.mentis.app.data.local.datastore.TokenManager 
+          return (T) new TokenManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 5: // okhttp3.logging.HttpLoggingInterceptor 
+          return (T) NetworkModule_ProvideLoggingInterceptorFactory.provideLoggingInterceptor();
+
+          case 6: // com.mentis.app.data.repository.ExamenRepositoryImpl 
+          return (T) new ExamenRepositoryImpl(singletonCImpl.provideMentisApiProvider.get(), singletonCImpl.providePreguntaDaoProvider.get());
+
+          case 7: // com.mentis.app.data.local.dao.PreguntaDao 
+          return (T) DatabaseModule_ProvidePreguntaDaoFactory.providePreguntaDao(singletonCImpl.provideMentisDatabaseProvider.get());
+
+          case 8: // com.mentis.app.data.local.MentisDatabase 
+          return (T) DatabaseModule_ProvideMentisDatabaseFactory.provideMentisDatabase(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 9: // com.mentis.app.data.repository.VacantesRepositoryImpl 
+          return (T) new VacantesRepositoryImpl(singletonCImpl.provideVacantesApiProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 10: // com.mentis.app.data.remote.api.VacantesApi 
+          return (T) NetworkModule_ProvideVacantesApiFactory.provideVacantesApi(singletonCImpl.provideDjangoRetrofitProvider.get());
+
+          case 11: // @javax.inject.Named("djangoRetrofit") retrofit2.Retrofit 
+          return (T) NetworkModule_ProvideDjangoRetrofitFactory.provideDjangoRetrofit(singletonCImpl.provideDjangoOkHttpClientProvider.get());
+
+          case 12: // @javax.inject.Named("djangoOkHttp") okhttp3.OkHttpClient 
+          return (T) NetworkModule_ProvideDjangoOkHttpClientFactory.provideDjangoOkHttpClient(singletonCImpl.provideLoggingInterceptorProvider.get());
+
+          case 13: // com.mentis.app.data.repository.ProgresoRepositoryImpl 
+          return (T) new ProgresoRepositoryImpl(singletonCImpl.provideMentisApiProvider.get());
+
+          default: throw new AssertionError(id);
+        }
+      }
+    }
+  }
+}
