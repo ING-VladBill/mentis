@@ -4,10 +4,12 @@
 // Listado filtrable + panel de detalle 360° al seleccionar una.
 // ==========================================
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 const ESTADO_CFG = {
   finalizada:  { label: 'Finalizada',  color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
@@ -19,17 +21,17 @@ const ESTADO_CFG = {
 export default function EntrevistasIA() {
   const { t } = useTheme();
   const navigate = useNavigate();
-  const [entrevistas, setEntrevistas] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('todas');
   const [busqueda, setBusqueda] = useState('');
 
-  useEffect(() => {
-    api.get('/api/evaluaciones/entrevistas/')
-      .then(({ data }) => setEntrevistas(data.results || data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: qk.entrevistas.list(),
+    queryFn: async () => {
+      const { data } = await api.get('/api/evaluaciones/entrevistas/');
+      return data.results || data || [];
+    },
+  });
+  const entrevistas = data || [];
 
   const stats = useMemo(() => ({
     total: entrevistas.length,

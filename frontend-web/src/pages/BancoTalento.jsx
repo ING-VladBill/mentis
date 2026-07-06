@@ -4,52 +4,59 @@
 // Filtros por score mínimo, habilidad y área. Toggle con estrella.
 // ==========================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 export default function BancoTalento() {
   const { t } = useTheme();
   const navigate = useNavigate();
 
-  const [candidatos, setCandidatos] = useState([]);
-  const [areas, setAreas] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [scoreMin, setScoreMin] = useState('');
   const [habilidad, setHabilidad] = useState('');
   const [areaId, setAreaId] = useState('');
-  const [quitandoId, setQuitandoId] = useState(null);
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    try {
+  const filtros = { scoreMin, habilidad: habilidad.trim(), areaId };
+
+  const { data, isLoading: loading } = useQuery({
+    queryKey: qk.candidatos.bancoTalento(filtros),
+    queryFn: async () => {
       const params = new URLSearchParams();
-      if (scoreMin)  params.set('score_min', scoreMin);
-      if (habilidad) params.set('habilidad', habilidad.trim());
-      if (areaId)    params.set('area_id', areaId);
+      if (filtros.scoreMin)  params.set('score_min', filtros.scoreMin);
+      if (filtros.habilidad) params.set('habilidad', filtros.habilidad);
+      if (filtros.areaId)    params.set('area_id', filtros.areaId);
       const { data } = await api.get(`/api/candidatos/banco-talento/?${params.toString()}`);
-      setCandidatos(data.candidatos || data || []);
-    } catch {
-      toast.error('No se pudo cargar el banco de talento.');
-    } finally { setLoading(false); }
-  }, [scoreMin, habilidad, areaId]);
+      return data.candidatos || data || [];
+    },
+  });
+  const candidatos = data || [];
 
-  useEffect(() => { cargar(); }, [cargar]);
-  useEffect(() => {
-    api.get('/api/areas/').then(({ data }) => setAreas(data.results || data || [])).catch(() => {});
-  }, []);
+  const { data: areasData } = useQuery({
+    queryKey: qk.areas.all,
+    queryFn: async () => {
+      const { data } = await api.get('/api/areas/');
+      return data.results || data || [];
+    },
+  });
+  const areas = areasData || [];
 
-  async function quitar(c) {
-    setQuitandoId(c.id);
-    try {
-      await api.post(`/api/candidatos/${c.id}/banco-talento/`);
+  const quitarMutation = useMutation({
+    mutationFn: (c) => api.post(`/api/candidatos/${c.id}/banco-talento/`),
+    onSuccess: (_res, c) => {
       toast.success(`${c.nombre_completo} retirado del banco.`);
-      setCandidatos(prev => prev.filter(x => x.id !== c.id));
-    } catch {
-      toast.error('No se pudo actualizar.');
-    } finally { setQuitandoId(null); }
+      queryClient.setQueryData(qk.candidatos.bancoTalento(filtros), (old) => (old || []).filter(x => x.id !== c.id));
+    },
+    onError: () => toast.error('No se pudo actualizar.'),
+  });
+  const quitandoId = quitarMutation.isPending ? quitarMutation.variables?.id : null;
+
+  function quitar(c) {
+    quitarMutation.mutate(c);
   }
 
   const scoreColor = (v) => v == null ? t.textFaint : v >= 14 ? '#10b981' : v >= 11 ? '#f59e0b' : '#ef4444';
@@ -77,7 +84,7 @@ export default function BancoTalento() {
         <div>
           <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: t.textMuted, marginBottom: 5 }}>Habilidad</label>
           <input type="text" placeholder="Ej. Python, liderazgo…" value={habilidad}
-            onChange={e => setHabilidad(e.target.value)} onKeyDown={e => e.key === 'Enter' && cargar()}
+            onChange={e => setHabilidad(e.target.value)}
             style={{ ...input, width: 200 }} />
         </div>
         <div>

@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const ESTADO_CFG = {
@@ -98,52 +100,43 @@ export default function Ranking() {
   const navigate       = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [vacantes,       setVacantes]       = useState([]);
+  const queryClient = useQueryClient();
   const [vacanteId,      setVacanteId]      = useState(searchParams.get('vacante_id') || '');
   const [vacanteActual,  setVacanteActual]  = useState(null);
-  const [ranking,        setRanking]        = useState([]);
-  const [total,          setTotal]          = useState(0);
-  const [loadingVac,     setLoadingVac]     = useState(true);
-  const [loadingRank,    setLoadingRank]    = useState(false);
-  const [marcando,       setMarcando]       = useState(false);
 
-  // Cargar lista de vacantes para el selector
-  useEffect(() => {
-    api.get('/api/vacantes/')
-      .then(r => setVacantes(r.data.results || r.data))
-      .catch(() => toast.error('Error al cargar vacantes'))
-      .finally(() => setLoadingVac(false));
-  }, []);
+  // Lista de vacantes para el selector
+  const { data: vacantesData, isLoading: loadingVac } = useQuery({
+    queryKey: qk.vacantes.list(),
+    queryFn: async () => {
+      const { data } = await api.get('/api/vacantes/');
+      return data.results || data;
+    },
+  });
+  const vacantes = vacantesData || [];
 
-  // Cargar ranking cuando se selecciona vacante
-  const cargarRanking = useCallback(async (id) => {
-    if (!id) return;
-    setLoadingRank(true);
-    try {
-      const { data } = await api.get(`/api/candidatos/ranking/?vacante_id=${id}`);
-      setRanking(data.ranking || []);
-      setTotal(data.total || 0);
-    } catch {
-      toast.error('Error al cargar el ranking');
-      setRanking([]);
-    } finally {
-      setLoadingRank(false);
-    }
-  }, []);
+  // Ranking de la vacante seleccionada
+  const { data: rankingData, isLoading: loadingRank } = useQuery({
+    queryKey: qk.ranking.list(vacanteId),
+    queryFn: async () => {
+      const { data } = await api.get(`/api/candidatos/ranking/?vacante_id=${vacanteId}`);
+      return data;
+    },
+    enabled: Boolean(vacanteId),
+  });
+  const ranking = rankingData?.ranking || [];
+  const total   = rankingData?.total || 0;
 
-  // Sincronizar vacante seleccionada con la lista
+  // Sincronizar vacante seleccionada con la lista (solo para mostrar su info)
   useEffect(() => {
     if (vacanteId && vacantes.length > 0) {
       const v = vacantes.find(x => String(x.id) === String(vacanteId));
       setVacanteActual(v || null);
-      cargarRanking(vacanteId);
     }
-  }, [vacanteId, vacantes, cargarRanking]);
+  }, [vacanteId, vacantes]);
 
   function handleSelectVacante(e) {
     const id = e.target.value;
     setVacanteId(id);
-    setRanking([]);
     if (id) {
       setSearchParams({ vacante_id: id });
     } else {
@@ -152,19 +145,22 @@ export default function Ranking() {
     }
   }
 
-  async function marcarFinalistas() {
-    if (!vacanteId) return;
-    setMarcando(true);
-    try {
-      const { data } = await api.post('/api/candidatos/marcar-finalistas/', { vacante_id: vacanteId });
+  const marcarMutation = useMutation({
+    mutationFn: () => api.post('/api/candidatos/marcar-finalistas/', { vacante_id: vacanteId }),
+    onSuccess: ({ data }) => {
       toast.success(data.mensaje || 'Finalistas marcados correctamente');
-      cargarRanking(vacanteId);
-    } catch (err) {
+      queryClient.invalidateQueries({ queryKey: qk.ranking.list(vacanteId) });
+    },
+    onError: (err) => {
       const msg = err.response?.data?.error || err.response?.data?.detail || 'Error al marcar finalistas';
       toast.error(msg);
-    } finally {
-      setMarcando(false);
-    }
+    },
+  });
+  const marcando = marcarMutation.isPending;
+
+  function marcarFinalistas() {
+    if (!vacanteId) return;
+    marcarMutation.mutate();
   }
 
   // Stats calculadas del ranking

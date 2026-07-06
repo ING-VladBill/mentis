@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../ThemeContext';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 // ─── Fuera del componente ─────────────────────────────────────────────────────
 function Field({ label, required, hint, textMuted, children }) {
@@ -33,7 +35,7 @@ export default function CandidatoForm() {
 
   const [form, setForm]         = useState(INITIAL);
   const [cvFile, setCvFile]     = useState(null);
-  const [vacantes, setVacantes] = useState([]);
+
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState(null);
 
@@ -57,14 +59,14 @@ export default function CandidatoForm() {
   const g2 = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 };
   const g3 = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 };
 
-  useEffect(() => {
-    api.get('/api/vacantes/')
-      .then(r => {
-        const lista = r.data.results || r.data;
-        setVacantes(lista.filter(v => ['abierta', 'en_proceso'].includes(v.estado)));
-      })
-      .catch(() => setVacantes([]));
-  }, []);
+  const { data: vacantesData } = useQuery({
+    queryKey: qk.vacantes.list(),
+    queryFn: async () => {
+      const { data } = await api.get('/api/vacantes/');
+      return data.results || data;
+    },
+  });
+  const vacantes = (vacantesData || []).filter(v => ['abierta', 'en_proceso'].includes(v.estado));
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;

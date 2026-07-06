@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTheme } from '../ThemeContext';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 import ConfirmModal from '../components/ConfirmModal';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -507,8 +509,7 @@ export default function VacanteDetalle() {
   const navigate = useNavigate();
   const { t }    = useTheme();
 
-  const [vacante, setVacante]       = useState(null);
-  const [loading, setLoading]       = useState(true);
+  const queryClient = useQueryClient();
   const [showPublicar, setPublicar] = useState(false);
 
   // Acciones de publicación
@@ -517,13 +518,21 @@ export default function VacanteDetalle() {
   const [confirm, setConfirm]             = useState(null);
   const [confirmLoad, setConfirmLoad]     = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    api.get(`/api/vacantes/${id}/`)
-      .then(r => setVacante(r.data))
-      .catch(() => toast.error('No se pudo cargar la vacante.'))
-      .finally(() => setLoading(false));
-  }, [id]);
+  const { data: vacante, isLoading: loading } = useQuery({
+    queryKey: qk.vacantes.detail(id),
+    queryFn: async () => {
+      const { data } = await api.get(`/api/vacantes/${id}/`);
+      return data;
+    },
+  });
+
+  // Mismo patrón que antes (setVacante(prev => ...)) pero escribiendo
+  // directo al cache, así el detalle queda actualizado Y la lista de
+  // vacantes se refresca sola la próxima vez que se visite.
+  function setVacante(updater) {
+    queryClient.setQueryData(qk.vacantes.detail(id), updater);
+    queryClient.invalidateQueries({ queryKey: qk.vacantes.list() });
+  }
 
   // ── Acciones ──
   async function publicar() {

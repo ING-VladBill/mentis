@@ -3,6 +3,7 @@ import {
   useLocation, useNavigate, Navigate,
 } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 
 import VacantesList   from './pages/VacantesList';
@@ -34,6 +35,7 @@ import EntrevistaVoz        from './pages/candidato/EntrevistaVoz';
 import RedireccionadorCandidato from './pages/RedireccionadorCandidato';
 import ProtectedRoute from './components/ProtectedRoute';
 import api            from './services/api';
+import { qk } from './lib/queryKeys';
 
 // ─── Theme Context ────────────────────────────────────────────────────────────
 import { ThemeContext, useTheme } from './ThemeContext';
@@ -262,32 +264,43 @@ function Topbar({ title, subtitle }) {
 // ─── Campana de notificaciones (alertas de RRHH: riesgo alto, etc.) ───────────
 function CampanaNotificaciones({ t }) {
   const [abierto, setAbierto] = useState(false);
-  const [notis, setNotis] = useState([]);
-  const [noLeidas, setNoLeidas] = useState(0);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const cargar = React.useCallback(() => {
-    api.get('/api/notificaciones/no-leidas/')
-      .then(({ data }) => { setNotis(data.notificaciones || []); setNoLeidas(data.total || 0); })
-      .catch(() => {});
-  }, []);
+  // refetchInterval: esta es la ÚNICA vista del admin que sí necesita
+  // "detectar cambios" de verdad (nuevas alertas de riesgo pueden llegar en
+  // cualquier momento sin que el propio usuario haga nada) — por eso, y solo
+  // aquí, usamos polling cada minuto en vez de depender de invalidación por
+  // acción del usuario.
+  const { data } = useQuery({
+    queryKey: qk.notificaciones.noLeidas,
+    queryFn: async () => {
+      const { data } = await api.get('/api/notificaciones/no-leidas/');
+      return data;
+    },
+    refetchInterval: 60000,
+  });
+  const notis = data?.notificaciones || [];
+  const noLeidas = data?.total || 0;
 
-  useEffect(() => {
-    cargar();
-    const id = setInterval(cargar, 60000); // refrescar cada minuto
-    return () => clearInterval(id);
-  }, [cargar]);
+  const marcarLeidaMutation = useMutation({
+    mutationFn: (n) => api.post(`/api/notificaciones/${n.id}/marcar-leida/`),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: qk.notificaciones.noLeidas }),
+  });
 
-  async function abrir(n) {
-    try { await api.post(`/api/notificaciones/${n.id}/marcar-leida/`); } catch { /* ok */ }
+  const marcarTodasMutation = useMutation({
+    mutationFn: () => api.post('/api/notificaciones/marcar-todas-leidas/'),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: qk.notificaciones.noLeidas }),
+  });
+
+  function abrir(n) {
+    marcarLeidaMutation.mutate(n);
     setAbierto(false);
-    cargar();
     if (n.candidato) navigate(`/candidatos/${n.candidato}`);
   }
 
-  async function marcarTodas() {
-    try { await api.post('/api/notificaciones/marcar-todas-leidas/'); } catch { /* ok */ }
-    cargar();
+  function marcarTodas() {
+    marcarTodasMutation.mutate();
   }
 
   return (

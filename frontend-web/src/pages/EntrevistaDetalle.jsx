@@ -7,10 +7,12 @@
 // Ruta: /entrevistas/:id
 // ==========================================
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 const ESTADO_CFG = {
   finalizada: { color: '#34d399', bg: 'rgba(52,211,153,0.1)', label: 'Finalizada' },
@@ -68,29 +70,22 @@ export default function EntrevistaDetalle() {
   const navigate = useNavigate();
   const { t } = useTheme();
 
-  const [entrevista, setEntrevista] = useState(null);
-  const [capturas, setCapturas] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('analisis'); // analisis | transcripcion | auditoria
 
-  useEffect(() => {
-    let activo = true;
-    (async () => {
+  const { data, isLoading: loading } = useQuery({
+    queryKey: qk.entrevistas.detail(id),
+    queryFn: async () => {
+      const { data: entrevista } = await api.get(`/api/evaluaciones/entrevistas/${id}/`);
+      let capturas = [];
       try {
-        const { data } = await api.get(`/api/evaluaciones/entrevistas/${id}/`);
-        if (!activo) return;
-        setEntrevista(data);
-        try {
-          const caps = await api.get(`/api/evaluaciones/entrevistas/${id}/capturas/`);
-          if (activo) setCapturas(caps.data || []);
-        } catch { /* capturas opcionales */ }
-      } catch {
-        if (activo) setEntrevista(null);
-      }
-      if (activo) setLoading(false);
-    })();
-    return () => { activo = false; };
-  }, [id]);
+        const caps = await api.get(`/api/evaluaciones/entrevistas/${id}/capturas/`);
+        capturas = caps.data || [];
+      } catch { /* capturas opcionales */ }
+      return { entrevista, capturas };
+    },
+  });
+  const entrevista = data?.entrevista ?? null;
+  const capturas   = data?.capturas ?? [];
 
   const card = { background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 14 };
   const notaColor = (v) => v == null ? t.textFaint : v >= 14 ? '#10b981' : v >= 11 ? '#f59e0b' : '#ef4444';

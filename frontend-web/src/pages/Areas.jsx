@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 // ─── Íconos disponibles para selección visual ─────────────────────────────────
 const ICONOS = [
@@ -251,24 +253,25 @@ function AreaModal({ area, onClose, onSaved, t, dark }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function Areas() {
   const { t, dark } = useTheme();
-  const [areas,      setAreas]      = useState([]);
-  const [loading,    setLoading]    = useState(true);
+  const queryClient = useQueryClient();
   const [modalOpen,  setModalOpen]  = useState(false);
   const [editArea,   setEditArea]   = useState(null);
 
-  const fetchAreas = useCallback(async () => {
-    setLoading(true);
-    try {
+  const { data, isLoading: loading } = useQuery({
+    queryKey: qk.areas.all,
+    queryFn: async () => {
       const { data } = await api.get('/api/areas/');
-      setAreas(data.results || data);
-    } catch {
-      toast.error('Error al cargar las áreas');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return data.results || data;
+    },
+  });
+  const areas = data || [];
 
-  useEffect(() => { fetchAreas(); }, [fetchAreas]);
+  // Se mantiene el mismo nombre/firma que antes (todas las acciones de abajo
+  // llaman a fetchAreas() tras guardar/activar/desactivar/eliminar) — ahora
+  // simplemente invalida el cache en vez de volver a pedir todo a mano.
+  function fetchAreas() {
+    queryClient.invalidateQueries({ queryKey: qk.areas.all });
+  }
 
   function openCreate() { setEditArea(null); setModalOpen(true); }
   function openEdit(area) { setEditArea(area); setModalOpen(true); }

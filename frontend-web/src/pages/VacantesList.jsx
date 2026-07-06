@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../ThemeContext';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
+import { qk } from '../lib/queryKeys';
 
 const ESTADO_CFG = {
   abierta:    { color: '#34d399', bg: 'rgba(52,211,153,0.1)',   border: 'rgba(52,211,153,0.2)'   },
@@ -29,27 +31,27 @@ export default function VacantesList() {
   const { t, dark } = useTheme();
   const navigate = useNavigate();
 
-  const [vacantes, setVacantes] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(null);
+  const queryClient = useQueryClient();
   const [filtro, setFiltro]     = useState('todas');
   const [confirm, setConfirm]   = useState(null);
   const [confirmLoad, setConfLoad] = useState(false);
-  const [dupId, setDupId]       = useState(null);
 
-  useEffect(() => { load(); }, []);
-
-  async function load() {
-    try {
-      setLoading(true);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: qk.vacantes.list(),
+    queryFn: async () => {
       const { data } = await api.get('/api/vacantes/');
-      setVacantes(data.results || data);
-    } catch {
-      setError('No se pudo conectar. ¿Está el backend corriendo en puerto 8000?');
-    } finally {
-      setLoading(false);
-    }
-  }
+      return data.results || data;
+    },
+  });
+  const vacantes = data || [];
+
+  const duplicarMutation = useMutation({
+    mutationFn: (id) => api.post(`/api/vacantes/${id}/duplicar/`),
+    onSuccess: (_res, _id, _ctx) => {
+      queryClient.invalidateQueries({ queryKey: qk.vacantes.list() });
+    },
+  });
+  const dupId = duplicarMutation.isPending ? duplicarMutation.variables : null;
 
   function pedirEliminar(v) {
     setConfirm({
@@ -62,7 +64,7 @@ export default function VacantesList() {
         setConfLoad(true);
         try {
           await api.delete(`/api/vacantes/${v.id}/`);
-          setVacantes(prev => prev.filter(x => x.id !== v.id));
+          queryClient.setQueryData(qk.vacantes.list(), (old) => (old || []).filter(x => x.id !== v.id));
           toast.success('Vacante eliminada.');
           setConfirm(null);
         } catch {
@@ -74,17 +76,11 @@ export default function VacantesList() {
     });
   }
 
-  async function duplicar(id, titulo) {
-    setDupId(id);
-    try {
-      await api.post(`/api/vacantes/${id}/duplicar/`);
-      toast.success(`"${titulo}" duplicada como borrador.`);
-      await load();
-    } catch {
-      toast.error('Error al duplicar la vacante.');
-    } finally {
-      setDupId(null);
-    }
+  function duplicar(id, titulo) {
+    duplicarMutation.mutate(id, {
+      onSuccess: () => toast.success(`"${titulo}" duplicada como borrador.`),
+      onError: () => toast.error('Error al duplicar la vacante.'),
+    });
   }
 
   const stats = {
@@ -120,16 +116,16 @@ export default function VacantesList() {
     }
   `;
 
-  if (loading) return (
+  if (isLoading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
       <div style={{ width: 32, height: 32, border: '2.5px solid rgba(124,58,237,0.3)', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
-  if (error) return (
+  if (isError) return (
     <div style={{ ...card, padding: '14px 18px', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.06)', color: '#f87171', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <i className="ti ti-alert-circle" style={{ fontSize: 18 }} /> {error}
+      <i className="ti ti-alert-circle" style={{ fontSize: 18 }} /> No se pudo conectar. ¿Está el backend corriendo en puerto 8000?
     </div>
   );
 

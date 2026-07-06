@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const ESTADO_CFG = {
@@ -55,46 +57,33 @@ export default function Evaluaciones() {
   const { t } = useTheme();
   const navigate = useNavigate();
 
-  const [examenes, setExamenes]   = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
-  const [filtroEstado, setFiltro] = useState('todos');
-  const [vacantes, setVacantes]   = useState([]);
+  const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroVacante, setFiltroVacante] = useState('');
 
-  useEffect(() => {
-    cargar();
-    cargarVacantes();
-  }, []);
-
-  async function cargar(params = {}) {
-    try {
-      setLoading(true);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: qk.evaluaciones.list({ estado: filtroEstado, vacante_id: filtroVacante || undefined }),
+    queryFn: async () => {
       const query = new URLSearchParams();
-      if (params.estado && params.estado !== 'todos') query.set('estado', params.estado);
-      if (params.vacante_id) query.set('vacante_id', params.vacante_id);
+      if (filtroEstado && filtroEstado !== 'todos') query.set('estado', filtroEstado);
+      if (filtroVacante) query.set('vacante_id', filtroVacante);
       const { data } = await api.get(`/api/evaluaciones/examenes/?${query}`);
-      setExamenes(data.results || data);
-    } catch {
-      setError('No se pudo cargar la lista de exámenes.');
-    } finally {
-      setLoading(false);
-    }
-  }
+      return data.results || data;
+    },
+  });
+  const examenes = data || [];
 
-  async function cargarVacantes() {
-    try {
+  const { data: vacantesData } = useQuery({
+    queryKey: qk.vacantes.list(),
+    queryFn: async () => {
       const { data } = await api.get('/api/vacantes/');
-      setVacantes(data.results || data);
-    } catch { /* no bloquea */ }
-  }
+      return data.results || data;
+    },
+  });
+  const vacantes = vacantesData || [];
 
   function aplicarFiltros(estado, vacante) {
-    const e = estado ?? filtroEstado;
-    const v = vacante ?? filtroVacante;
-    setFiltroEstado(e);
-    setFiltroVacante(v);
-    cargar({ estado: e, vacante_id: v || undefined });
+    if (estado !== undefined) setFiltroEstado(estado);
+    if (vacante !== undefined) setFiltroVacante(vacante);
   }
 
   const stats = {
@@ -106,11 +95,11 @@ export default function Evaluaciones() {
 
   const card = { background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 12, transition: 'background 0.25s' };
 
-  if (loading) return <Spinner />;
+  if (isLoading) return <Spinner />;
 
-  if (error) return (
+  if (isError) return (
     <div style={{ ...card, padding: '14px 18px', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.06)', color: '#f87171', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <i className="ti ti-alert-circle" style={{ fontSize: 18 }} /> {error}
+      <i className="ti ti-alert-circle" style={{ fontSize: 18 }} /> No se pudo cargar la lista de exámenes.
     </div>
   );
 

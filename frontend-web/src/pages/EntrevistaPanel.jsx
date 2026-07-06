@@ -7,8 +7,10 @@
 // Se inserta en CandidatoDetalle: <EntrevistaPanel candidatoId={id} t={t} />
 // ==========================================
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 // ---------- Radar SVG (sin dependencias) ----------
 function Radar({ dimensiones, t }) {
@@ -55,31 +57,27 @@ function Radar({ dimensiones, t }) {
 }
 
 export default function EntrevistaPanel({ candidatoId, t }) {
-  const [entrevista, setEntrevista] = useState(null);
-  const [capturas, setCapturas] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [verTranscripcion, setVerTranscripcion] = useState(false);
 
-  useEffect(() => {
-    let activo = true;
-    (async () => {
-      try {
-        const { data } = await api.get(`/api/evaluaciones/entrevistas/?candidato_id=${candidatoId}`);
-        const lista = data.results || data || [];
-        const ent = lista[0] || null;
-        if (!activo) return;
-        setEntrevista(ent);
-        if (ent?.id) {
-          try {
-            const caps = await api.get(`/api/evaluaciones/entrevistas/${ent.id}/capturas/`);
-            if (activo) setCapturas(caps.data || []);
-          } catch { /* capturas opcionales */ }
-        }
-      } catch { /* sin entrevista aún */ }
-      if (activo) setLoading(false);
-    })();
-    return () => { activo = false; };
-  }, [candidatoId]);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: qk.entrevistas.porCandidato(candidatoId),
+    queryFn: async () => {
+      const { data } = await api.get(`/api/evaluaciones/entrevistas/?candidato_id=${candidatoId}`);
+      const lista = data.results || data || [];
+      const ent = lista[0] || null;
+      let capturas = [];
+      if (ent?.id) {
+        try {
+          const caps = await api.get(`/api/evaluaciones/entrevistas/${ent.id}/capturas/`);
+          capturas = caps.data || [];
+        } catch { /* capturas opcionales */ }
+      }
+      return { entrevista: ent, capturas };
+    },
+    enabled: Boolean(candidatoId),
+  });
+  const entrevista = data?.entrevista ?? null;
+  const capturas   = data?.capturas ?? [];
 
   if (loading || !entrevista || entrevista.estado !== 'finalizada') return null;
 

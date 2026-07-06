@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../ThemeContext';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 import ConfirmModal from '../components/ConfirmModal';
 
 // ─── Fuera del componente ─────────────────────────────────────────────────────
@@ -240,23 +242,25 @@ export default function Usuarios() {
   const { t } = useTheme();
   const usuarioActual = JSON.parse(localStorage.getItem('usuario') || '{}');
 
-  const [usuarios, setUsuarios]    = useState([]);
-  const [loading, setLoading]      = useState(true);
-  const [error, setError]          = useState(null);
+  const queryClient = useQueryClient();
   const [showCrear, setCrear]      = useState(false);
   const [modalPwd, setModalPwd]    = useState(null);
   const [confirm, setConfirm]      = useState(null);
   const [confirmLoad, setConfLoad] = useState(false);
 
-  useEffect(() => { cargar(); }, []);
-
-  async function cargar() {
-    try {
-      setLoading(true);
+  const { data, isLoading: loading, isError } = useQuery({
+    queryKey: qk.usuarios.all,
+    queryFn: async () => {
       const { data } = await api.get('/api/auth/usuarios/');
-      setUsuarios(data);
-    } catch { setError('No se pudo cargar la lista de usuarios.'); }
-    finally { setLoading(false); }
+      return data;
+    },
+  });
+  const usuarios = data || [];
+  const error = isError ? 'No se pudo cargar la lista de usuarios.' : null;
+
+  // Actualiza el cache directamente (mismo patrón que antes con setUsuarios)
+  function setUsuarios(updater) {
+    queryClient.setQueryData(qk.usuarios.all, updater);
   }
 
   function pedirReenviarCredenciales(u) {

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const SEMAFORO_CFG = {
@@ -260,23 +262,20 @@ export default function ExamenDetalle() {
   const navigate = useNavigate();
   const { t }    = useTheme();
 
-  const [examen,    setExamen]    = useState(null);
-  const [auditoria, setAuditoria] = useState(null);
-  const [loading,   setLoading]   = useState(true);
-  const [tab,       setTab]       = useState('preguntas'); // 'preguntas' | 'auditoria'
+  const [tab, setTab] = useState('preguntas'); // 'preguntas' | 'auditoria'
 
-  useEffect(() => {
-    Promise.all([
-      api.get(`/api/evaluaciones/examenes/${id}/`),
-      api.get(`/api/evaluaciones/examenes/${id}/auditoria/`),
-    ])
-      .then(([resEx, resAud]) => {
-        setExamen(resEx.data);
-        setAuditoria(resAud.data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [id]);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: qk.evaluaciones.detail(id),
+    queryFn: async () => {
+      const [resEx, resAud] = await Promise.all([
+        api.get(`/api/evaluaciones/examenes/${id}/`),
+        api.get(`/api/evaluaciones/examenes/${id}/auditoria/`),
+      ]);
+      return { examen: resEx.data, auditoria: resAud.data };
+    },
+  });
+  const examen    = data?.examen ?? null;
+  const auditoria = data?.auditoria ?? null;
 
   const card = { background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: 12 };
 

@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 import EntrevistaPanel from './EntrevistaPanel';
 import AccionesTalento from './AccionesTalento';
 
@@ -160,13 +162,17 @@ function InfoField({ label, value, t }) {
 // ─── Tags Card ────────────────────────────────────────────────────────────────
 function TagsCard({ candidatoId, initialTags, t }) {
   const [tags, setTags]         = useState(initialTags || []);
-  const [allTags, setAllTags]   = useState([]);
   const [showDrop, setShowDrop] = useState(false);
   const dropRef                 = useRef(null);
 
-  useEffect(() => {
-    api.get('/api/tags/').then(r => setAllTags(r.data.results || r.data)).catch(() => {});
-  }, []);
+  const { data: allTagsData } = useQuery({
+    queryKey: qk.tags.all,
+    queryFn: async () => {
+      const { data } = await api.get('/api/tags/');
+      return data.results || data;
+    },
+  });
+  const allTags = allTagsData || [];
 
   useEffect(() => {
     function handler(e) { if (dropRef.current && !dropRef.current.contains(e.target)) setShowDrop(false); }
@@ -252,8 +258,7 @@ function NotasCard({ candidatoId, t }) {
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
   const miNombre = `${usuario.nombre || ''} ${usuario.apellidos || ''}`.trim();
 
-  const [notas, setNotas]         = useState([]);
-  const [loadingNotas, setLoad]   = useState(true);
+  const queryClient = useQueryClient();
   const [nuevaNota, setNueva]     = useState('');
   const [guardando, setGuardando] = useState(false);
   const [editandoId, setEditId]   = useState(null);
@@ -261,15 +266,19 @@ function NotasCard({ candidatoId, t }) {
   const [guardandoEdit, setGEdit] = useState(false);
   const [eliminandoId, setDelId]  = useState(null);
 
-  useEffect(() => { cargarNotas(); }, [candidatoId]);
-
-  async function cargarNotas() {
-    try {
-      setLoad(true);
+  const { data: notasData, isLoading: loadingNotas } = useQuery({
+    queryKey: qk.candidatos.notas(candidatoId),
+    queryFn: async () => {
       const { data } = await api.get(`/api/candidatos/${candidatoId}/notas/`);
-      setNotas(data.results || data);
-    } catch { toast.error('No se pudieron cargar las notas.'); }
-    finally { setLoad(false); }
+      return data.results || data;
+    },
+  });
+  const notas = notasData || [];
+
+  // Mismo patrón usado en el resto del admin: mantiene el nombre setNotas
+  // pero ahora escribe directo al cache (así no hay estado duplicado).
+  function setNotas(updater) {
+    queryClient.setQueryData(qk.candidatos.notas(candidatoId), updater);
   }
 
   async function agregar() {
@@ -390,18 +399,27 @@ export default function CandidatoDetalle() {
   const navigate = useNavigate();
   const { t }    = useTheme();
 
-  const [candidato,  setCandidato]  = useState(null);
-  const [loading,    setLoading]    = useState(true);
+  const queryClient = useQueryClient();
   const [analizando, setAnalizando] = useState(false);
   const [reenviando, setReenviando] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    api.get(`/api/candidatos/${id}/`)
-      .then(r => setCandidato(r.data))
-      .catch(() => toast.error('No se pudo cargar el candidato'))
-      .finally(() => setLoading(false));
-  }, [id]);
+  const { data: candidato, isLoading: loading } = useQuery({
+    queryKey: qk.candidatos.detail(id),
+    queryFn: async () => {
+      const { data } = await api.get(`/api/candidatos/${id}/`);
+      return data;
+    },
+  });
+
+  // Mismo patrón: setCandidato mantiene su nombre pero ahora escribe al
+  // cache. Esto también refresca la lista de candidatos sola (invalidate).
+  function setCandidato(updater) {
+    queryClient.setQueryData(qk.candidatos.detail(id), updater);
+    // La lista general se invalida (no se reescribe a mano) porque no sabemos
+    // bajo qué combinación de filtros esté cacheada; al invalidarla, la
+    // próxima vez que se visite /candidatos se refresca sola.
+    queryClient.invalidateQueries({ queryKey: qk.candidatos.all });
+  }
 
   async function reenviarCorreoEtapa() {
     setReenviando(true);

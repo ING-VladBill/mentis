@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  CONSTANTES
@@ -663,15 +665,23 @@ export default function VacanteForm() {
     colorScheme: 'dark',
   };
 
-  // async-parallel: carga áreas y vacante en paralelo
+  // El catálogo de áreas activas se cachea (se repite cada vez que se abre
+  // este formulario); la vacante a editar se sigue pidiendo fresca cada vez.
+  const { data: areasCache } = useQuery({
+    queryKey: qk.areas.activas,
+    queryFn: async () => {
+      const { data } = await api.get('/api/areas/activas/');
+      return data;
+    },
+  });
+
   useEffect(() => {
-    const fetchAreas = api.get('/api/areas/activas/').then(r => r.data).catch(() => []);
     const fetchVacante = isEdit
       ? api.get(`/api/vacantes/${id}/`).then(r => r.data).catch(() => null)
       : Promise.resolve(null);
 
-    Promise.all([fetchAreas, fetchVacante]).then(([areasData, vacanteData]) => {
-      setAreas(areasData);
+    fetchVacante.then((vacanteData) => {
+      setAreas(areasCache || []);
       if (vacanteData) {
         // Fix: campos con "" reemplazados por default de INITIAL
         const merged = { ...INITIAL, ...vacanteData };
@@ -690,7 +700,7 @@ export default function VacanteForm() {
       }
       setLoading(false);
     });
-  }, [id, isEdit]);
+  }, [id, isEdit, areasCache]);
 
   // Validación por paso — js-early-exit
   function validateStep(stepNum) {

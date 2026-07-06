@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 // ─── Ícono PDF ────────────────────────────────────────────────────────────────
 function PdfIcon({ size = 18 }) {
@@ -88,17 +90,19 @@ function ResultadoFila({ item, t }) {
 export default function CargaMasiva() {
   const { t, dark } = useTheme();
 
-  const [vacantes,    setVacantes]    = useState([]);
   const [vacanteId,   setVacanteId]   = useState('');
   const [archivos,    setArchivos]    = useState([]);
   const [enviando,    setEnviando]    = useState(false);
   const [resultado,   setResultado]   = useState(null);
 
-  useEffect(() => {
-    api.get('/api/vacantes/abiertas/')
-      .then(r => setVacantes(r.data.vacantes || r.data))
-      .catch(() => toast.error('Error al cargar las vacantes'));
-  }, []);
+  const { data: vacantesData } = useQuery({
+    queryKey: qk.vacantes.abiertas,
+    queryFn: async () => {
+      const { data } = await api.get('/api/vacantes/abiertas/');
+      return data.vacantes || data;
+    },
+  });
+  const vacantes = vacantesData || [];
 
   const onDrop = useCallback((accepted) => {
     if (!vacanteId) return;

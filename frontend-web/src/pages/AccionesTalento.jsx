@@ -7,10 +7,13 @@
 // ==========================================
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 export default function AccionesTalento({ candidato, t }) {
+  const queryClient = useQueryClient();
   const [enBanco, setEnBanco] = useState(Boolean(candidato?.en_banco_talento));
   const [cargandoBanco, setCargandoBanco] = useState(false);
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -25,6 +28,10 @@ export default function AccionesTalento({ candidato, t }) {
       const { data } = await api.post(`/api/candidatos/${candidato.id}/banco-talento/`);
       setEnBanco(data.en_banco_talento);
       toast.success(data.mensaje || 'Actualizado.');
+      // Refresca el detalle del candidato y cualquier vista del banco de
+      // talento que ya esté en cache (sin recargar la página).
+      queryClient.invalidateQueries({ queryKey: qk.candidatos.detail(candidato.id) });
+      queryClient.invalidateQueries({ queryKey: ['candidatos', 'banco-talento'] });
     } catch {
       toast.error('No se pudo actualizar el banco de talento.');
     } finally { setCargandoBanco(false); }
@@ -37,9 +44,14 @@ export default function AccionesTalento({ candidato, t }) {
       await api.post(`/api/candidatos/${candidato.id}/descartar/`, { motivo: motivo.trim() });
       toast.success('Candidato descartado.');
       setModalAbierto(false);
-      setTimeout(() => window.location.reload(), 600);
+      // Antes esto hacía un window.location.reload() (recarga completa y
+      // lenta). Ahora solo invalidamos el cache: el detalle y la lista se
+      // actualizan solos, sin perder el resto del estado de la página.
+      queryClient.invalidateQueries({ queryKey: qk.candidatos.detail(candidato.id) });
+      queryClient.invalidateQueries({ queryKey: qk.candidatos.all });
     } catch (err) {
       toast.error(err.response?.data?.error || 'No se pudo descartar.');
+    } finally {
       setDescartando(false);
     }
   }

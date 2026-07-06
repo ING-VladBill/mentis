@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const SEVERIDAD_CFG = {
@@ -61,20 +63,19 @@ function SeveridadBadge({ severidad }) {
 export default function Auditoria() {
   const { t } = useTheme();
 
-  const [examenes,  setExamenes]  = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState(null);
   const [expandido, setExpandido] = useState(null);
   const [auditorias, setAuditorias] = useState({});
   const [loadingAud, setLoadingAud] = useState({});
   const [filtro, setFiltro]       = useState('todos');
 
-  useEffect(() => {
-    api.get('/api/evaluaciones/examenes/?estado=finalizado')
-      .then(r => setExamenes(r.data.results || r.data))
-      .catch(() => setError('No se pudo cargar la auditoría.'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading, isError: error } = useQuery({
+    queryKey: qk.auditoria.list({ estado: 'finalizado' }),
+    queryFn: async () => {
+      const { data } = await api.get('/api/evaluaciones/examenes/?estado=finalizado');
+      return data.results || data;
+    },
+  });
+  const examenes = data || [];
 
   async function toggleExpandir(exId) {
     if (expandido === exId) { setExpandido(null); return; }
@@ -105,7 +106,7 @@ export default function Auditoria() {
 
   if (error) return (
     <div style={{ ...card, padding: '14px 18px', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.06)', color: '#f87171', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <i className="ti ti-alert-circle" style={{ fontSize: 18 }} /> {error}
+      <i className="ti ti-alert-circle" style={{ fontSize: 18 }} /> No se pudo cargar la auditoría.
     </div>
   );
 

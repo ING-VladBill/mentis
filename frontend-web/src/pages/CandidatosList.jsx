@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../ThemeContext';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { qk } from '../lib/queryKeys';
 
 const ESTADO_CFG = {
   postulado:             { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)',  border: 'rgba(156,163,175,0.2)',  label: 'Postulado'             },
@@ -64,63 +66,81 @@ function EstadoBadge({ estado }) {
 
 const FILTROS = ['todos', 'postulado', 'cv_aprobado', 'cv_rechazado', 'examen_pendiente', 'finalista', 'contratado', 'descartado'];
 
+// Cada etapa agrupa su estado "exacto" MÁS los estados que implican haberla
+// superado. Ej: "Postulado" incluye a todos (todos postularon); "Examen
+// pendiente" incluye a quien está en examen o más adelante. Los estados
+// negativos/terminales (rechazos, descartado, contratado, finalista) son
+// match exacto porque son ramas, no etapas de avance.
+const GRUPOS_FILTRO = {
+  postulado: ['postulado','cv_analizando','cv_aprobado','examen_pendiente','examen_en_curso',
+              'examen_aprobado','entrevista_pendiente','entrevista_en_curso','entrevista_completada',
+              'finalista','entrevista_presencial','contratado'],
+  cv_aprobado: ['cv_aprobado','examen_pendiente','examen_en_curso','examen_aprobado',
+                'entrevista_pendiente','entrevista_en_curso','entrevista_completada',
+                'finalista','entrevista_presencial','contratado'],
+  examen_pendiente: ['examen_pendiente','examen_en_curso'],
+  cv_rechazado: ['cv_rechazado'],
+  finalista: ['finalista'],
+  contratado: ['contratado'],
+  descartado: ['descartado','examen_rechazado'],
+};
+
 export default function CandidatosList() {
   const { t } = useTheme();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const vacanteId = searchParams.get('vacante_id');
 
-  const [candidatos, setCandidatos] = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [filtro, setFiltro]         = useState('todos');
-  const [busqueda, setBusqueda]     = useState('');
-  const [analizando, setAnalizando] = useState({});
-  const [vacanteNombre, setVacanteNombre] = useState('');
+  const [filtro, setFiltro]     = useState('todos');
+  const [busqueda, setBusqueda] = useState('');
 
-  useEffect(() => { cargar(); }, [vacanteId]);
-
-  async function cargar() {
-    try {
-      setLoading(true);
+  // ---------------- Cache: lista de candidatos ----------------
+  const { data, isLoading, isError } = useQuery({
+    queryKey: qk.candidatos.list({ vacanteId }),
+    queryFn: async () => {
       const query = vacanteId ? `?vacante_id=${vacanteId}` : '';
       const { data } = await api.get(`/api/candidatos/${query}`);
-      const lista = data.results || data;
-      setCandidatos(lista);
-      if (vacanteId && lista.length > 0 && lista[0].vacante_titulo) {
-        setVacanteNombre(lista[0].vacante_titulo);
-      }
-    } catch {
-      setError('No se pudo conectar. ¿Está el backend corriendo?');
-    } finally {
-      setLoading(false);
-    }
-  }
+      return data.results || data;
+    },
+  });
+  const candidatos = data || [];
+  const vacanteNombre = (vacanteId && candidatos[0]?.vacante_titulo) || '';
 
-  async function analizarCV(candidato) {
-    setAnalizando(prev => ({ ...prev, [candidato.id]: true }));
-    setCandidatos(prev =>
-      prev.map(c => c.id === candidato.id ? { ...c, estado: 'cv_analizando' } : c)
-    );
-    try {
-      const { data } = await api.post(`/api/candidatos/${candidato.id}/analizar/`);
-      setCandidatos(prev =>
-        prev.map(c => c.id === candidato.id ? { ...c, ...data.candidato } : c)
+  // ---------------- Mutación: analizar CV con IA ----------------
+  const analizarMutation = useMutation({
+    mutationFn: (candidato) => api.post(`/api/candidatos/${candidato.id}/analizar/`),
+    onMutate: async (candidato) => {
+      // Optimista: pintamos "Analizando..." al instante, sin esperar al servidor
+      const key = qk.candidatos.list({ vacanteId });
+      await queryClient.cancelQueries({ queryKey: key });
+      const previo = queryClient.getQueryData(key);
+      queryClient.setQueryData(key, (old) =>
+        (old || []).map(c => c.id === candidato.id ? { ...c, estado: 'cv_analizando' } : c)
+      );
+      return { previo, key };
+    },
+    onSuccess: (res, candidato) => {
+      const { data } = res;
+      queryClient.setQueryData(qk.candidatos.list({ vacanteId }), (old) =>
+        (old || []).map(c => c.id === candidato.id ? { ...c, ...data.candidato } : c)
       );
       if (data.pasa_filtro) {
         toast.success(`✅ CV aprobado — Score: ${data.score}. Correo enviado.`);
       } else {
         toast.error(`❌ CV rechazado — Score: ${data.score}.`);
       }
-    } catch (err) {
+    },
+    onError: (err, candidato, context) => {
+      // Revertimos el optimismo si el servidor falló
+      if (context?.key) queryClient.setQueryData(context.key, context.previo);
       const msg = err.response?.data?.mensaje || err.response?.data?.error || 'Error en el análisis.';
       toast.error(msg);
-      setCandidatos(prev =>
-        prev.map(c => c.id === candidato.id ? { ...c, estado: 'postulado' } : c)
-      );
-    } finally {
-      setAnalizando(prev => ({ ...prev, [candidato.id]: false }));
-    }
+    },
+  });
+
+  function analizarCV(candidato) {
+    analizarMutation.mutate(candidato);
   }
 
   const stats = {
@@ -128,25 +148,6 @@ export default function CandidatosList() {
     aprobados:  candidatos.filter(c => ['cv_aprobado','examen_aprobado','entrevista_completada','finalista','contratado'].includes(c.estado)).length,
     enProceso:  candidatos.filter(c => ['cv_analizando','examen_pendiente','examen_en_curso','entrevista_pendiente','entrevista_en_curso','entrevista_presencial'].includes(c.estado)).length,
     rechazados: candidatos.filter(c => ['cv_rechazado','examen_rechazado','descartado'].includes(c.estado)).length,
-  };
-
-  // Cada etapa agrupa su estado "exacto" MÁS los estados que implican haberla
-  // superado. Ej: "Postulado" incluye a todos (todos postularon); "Examen
-  // pendiente" incluye a quien está en examen o más adelante. Los estados
-  // negativos/terminales (rechazos, descartado, contratado, finalista) son
-  // match exacto porque son ramas, no etapas de avance.
-  const GRUPOS_FILTRO = {
-    postulado: ['postulado','cv_analizando','cv_aprobado','examen_pendiente','examen_en_curso',
-                'examen_aprobado','entrevista_pendiente','entrevista_en_curso','entrevista_completada',
-                'finalista','entrevista_presencial','contratado'],
-    cv_aprobado: ['cv_aprobado','examen_pendiente','examen_en_curso','examen_aprobado',
-                  'entrevista_pendiente','entrevista_en_curso','entrevista_completada',
-                  'finalista','entrevista_presencial','contratado'],
-    examen_pendiente: ['examen_pendiente','examen_en_curso'],
-    cv_rechazado: ['cv_rechazado'],
-    finalista: ['finalista'],
-    contratado: ['contratado'],
-    descartado: ['descartado','examen_rechazado'],
   };
 
   const lista = candidatos
@@ -172,16 +173,16 @@ export default function CandidatosList() {
     transition: 'background 0.25s, border-color 0.25s',
   };
 
-  if (loading) return (
+  if (isLoading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
       <div style={{ width: 32, height: 32, border: '2.5px solid rgba(124,58,237,0.3)', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
     </div>
   );
 
-  if (error) return (
+  if (isError) return (
     <div style={{ ...card, padding: '14px 18px', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.06)', color: '#f87171', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <i className="ti ti-alert-circle" style={{ fontSize: 18 }} /> {error}
+      <i className="ti ti-alert-circle" style={{ fontSize: 18 }} /> No se pudo conectar. ¿Está el backend corriendo?
     </div>
   );
 
@@ -283,7 +284,7 @@ export default function CandidatosList() {
             <tbody>
               {lista.map((c, i) => {
                 const cls = CLASIFICACION_CFG[c.clasificacion_ia];
-                const estaAnalizando = analizando[c.id];
+                const estaAnalizando = analizarMutation.isPending && analizarMutation.variables?.id === c.id;
                 const puedeAnalizar = !['cv_analizando', 'contratado'].includes(c.estado);
                 const nombreParts    = (c.nombre_completo || '').split(' ');
 
