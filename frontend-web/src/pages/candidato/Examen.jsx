@@ -343,7 +343,7 @@ export default function Examen() {
 
       </header>
 
-      <div style={{ maxWidth: 840, margin: '0 auto', padding: '28px 20px', display: 'grid', gridTemplateColumns: '1fr 220px', gap: 24, alignItems: 'start' }}>
+      <div style={{ maxWidth: 840, margin: '0 auto', padding: '28px 20px', display: 'grid', gridTemplateColumns: `1fr ${Math.min(5, preguntas.length) * 44 + 40}px`, gap: 24, alignItems: 'start' }}>
 
         {/* Pregunta actual */}
         {pregunta && (
@@ -422,7 +422,11 @@ export default function Examen() {
         {/* Panel lateral — mapa de preguntas */}
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: '20px' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>Preguntas</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 36px)', gap: 8, justifyContent: 'space-between' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${Math.min(5, preguntas.length)}, 36px)`,
+            gap: 8,
+          }}>
             {preguntas.map((p, i) => {
               const respondida = !!respuestas[p.id]?.trim();
               const esActual   = i === pregActual;
