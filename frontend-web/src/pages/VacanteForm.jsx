@@ -726,6 +726,13 @@ export default function VacanteForm() {
   function handleBack() {
     setError(null);
     setDirection('back');
+    // Al retroceder, quita el paso actual del set de completados
+    // para que vuelva a morado (en progreso) en vez de quedarse verde
+    setCompleted(prev => {
+      const next = new Set(prev);
+      next.delete(step);
+      return next;
+    });
     setStep(s => Math.max(1, s - 1));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
