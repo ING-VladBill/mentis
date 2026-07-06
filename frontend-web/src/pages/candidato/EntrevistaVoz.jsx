@@ -319,17 +319,20 @@ export default function EntrevistaVoz() {
         setFase('en_curso');
         setEmocionBase('pensando');
         iniciarTimer();
-        await iniciarMicrofono();
-        // EVA rompe el hielo: le pedimos que salude ella primero, para dar
-        // contexto de que la entrevista ya arrancó (no esperar al candidato).
+        // PASO 1: EVA saluda PRIMERO. Enviamos el disparador ANTES de encender
+        // el micrófono, para que el ruido de fondo del candidato no active el
+        // detector de voz y haga que Gemini se quede esperando.
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({
             clientContent: {
-              turns: [{ role: 'user', parts: [{ text: '[SISTEMA: La entrevista acaba de comenzar. Saluda tú primero al candidato, preséntate brevemente como EVA y haz tu primera pregunta rompehielo. No esperes a que el candidato hable.]' }] }],
+              turns: [{ role: 'user', parts: [{ text: '[INICIO DE LA ENTREVISTA] Preséntate como EVA, saluda al candidato por su nombre con calidez, menciona brevemente el puesto al que postula, explícale en una frase que será una conversación natural, y hazle tu primera pregunta rompehielo. Habla tú ahora, no esperes respuesta previa.' }] }],
               turnComplete: true,
             },
           }));
         }
+        // PASO 2: encender el micrófono un instante después, para que EVA tenga
+        // el turno de palabra al inicio sin ser interrumpida por el VAD.
+        setTimeout(() => { iniciarMicrofono(); }, 1200);
         return;
       }
 
@@ -526,6 +529,31 @@ export default function EntrevistaVoz() {
       setFase('error');
     }
   }, [token]);
+
+  // Auditoría del navegador durante la entrevista (copiar, salir, cambiar pestaña...)
+  useEffect(() => {
+    if (fase !== 'en_curso') return;
+    function reportar(tipo, detalle) {
+      api.post('/api/evaluaciones/entrevista/evento/', { token, tipo, detalle }).catch(() => {});
+    }
+    const onBlur = () => reportar('cambio_ventana', 'El candidato salió de la ventana de la entrevista');
+    const onVisibility = () => { if (document.hidden) reportar('cambio_pestana', 'Cambió de pestaña u ocultó la ventana'); };
+    const onCopy = () => reportar('copiar', 'Intento de copiar contenido');
+    const onPaste = () => reportar('pegar', 'Intento de pegar contenido');
+    const onContext = () => reportar('clic_derecho', 'Clic derecho durante la entrevista');
+    window.addEventListener('blur', onBlur);
+    document.addEventListener('visibilitychange', onVisibility);
+    document.addEventListener('copy', onCopy);
+    document.addEventListener('paste', onPaste);
+    document.addEventListener('contextmenu', onContext);
+    return () => {
+      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('visibilitychange', onVisibility);
+      document.removeEventListener('copy', onCopy);
+      document.removeEventListener('paste', onPaste);
+      document.removeEventListener('contextmenu', onContext);
+    };
+  }, [fase, token]);
 
   useEffect(() => () => {
     clearInterval(timerRef.current);

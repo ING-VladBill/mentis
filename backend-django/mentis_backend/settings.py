@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ------------------------------------------
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,10.0.2.2').split(',')
 
 # CSRF: dominios de confianza para el admin en producción (Railway/HTTPS)
 _csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', '')
@@ -166,7 +166,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',   # React (Vite)
     'http://localhost:3000',   # React alternativo
     'http://localhost:8081',   # Android emulador
-    'http://10.0.2.2:5173',   # React (Vite) - Android Studio
+    'http://10.0.2.2:5173',   # React (Vite) en Android emulador
 ]
 # En producción se agregan orígenes extra desde la variable de entorno
 # CORS_EXTRA_ORIGINS (separados por coma). Ej: https://mentis.vercel.app

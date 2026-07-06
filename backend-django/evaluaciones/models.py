@@ -178,6 +178,7 @@ class EntrevistaIA(models.Model):
     analisis_dimensiones = models.JSONField(default=dict, blank=True)
     resumen_ia    = models.TextField(blank=True, help_text='Resumen ejecutivo de la entrevista para RRHH')
     temas_criticos_cubiertos = models.JSONField(default=list, blank=True)
+    eventos_navegador = models.JSONField(default=list, blank=True, help_text='Auditoria del navegador durante la entrevista: copiar, cambiar pestana, salir, etc.')
     # El system prompt exacto que se usó (auditoría/depuración)
     prompt_utilizado = models.TextField(blank=True)
 

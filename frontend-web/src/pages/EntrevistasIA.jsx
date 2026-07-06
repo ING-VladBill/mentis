@@ -117,9 +117,14 @@ export default function EntrevistasIA() {
                 onMouseEnter={ev => { ev.currentTarget.style.transform = 'translateY(-2px)'; ev.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)'; }}
                 onMouseLeave={ev => { ev.currentTarget.style.transform = 'translateY(0)'; ev.currentTarget.style.boxShadow = 'none'; }}>
 
-                <div style={{ width: 42, height: 42, borderRadius: 11, background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <i className="ti ti-robot" style={{ fontSize: 20 }} />
-                </div>
+                {e.foto_identidad ? (
+                  <img src={e.foto_identidad} alt={e.candidato_nombre}
+                    style={{ width: 42, height: 42, borderRadius: 11, objectFit: 'cover', flexShrink: 0, border: `1px solid ${t.cardBorder}` }} />
+                ) : (
+                  <div style={{ width: 42, height: 42, borderRadius: 11, background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <i className="ti ti-robot" style={{ fontSize: 20 }} />
+                  </div>
+                )}
 
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 600, color: t.text }}>{e.candidato_nombre}</div>

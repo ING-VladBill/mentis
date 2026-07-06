@@ -98,7 +98,7 @@ export default function AccionesTalento({ candidato, t }) {
       {modalAbierto && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,15,20,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, animation: 'modalFade 0.2s ease both' }}
           onClick={(e) => { if (e.target === e.currentTarget && !descartando) setModalAbierto(false); }}>
-          <div style={{ width: 440, maxWidth: '90vw', background: '#1e1e24', borderRadius: 16, border: `1px solid ${t.cardBorder}`, padding: '24px 26px', boxShadow: '0 24px 70px rgba(0,0,0,0.55)', animation: 'modalPop 0.22s cubic-bezier(0.34,1.4,0.5,1) both' }}>
+          <div style={{ width: 440, maxWidth: '90vw', background: t.card, borderRadius: 16, border: `1px solid ${t.cardBorder}`, padding: '24px 26px', boxShadow: '0 24px 70px rgba(0,0,0,0.55)', animation: 'modalPop 0.22s cubic-bezier(0.34,1.4,0.5,1) both' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <i className="ti ti-user-x" style={{ fontSize: 18, color: '#ef4444' }} />

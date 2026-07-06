@@ -138,9 +138,37 @@ export default function EntrevistaDetalle() {
       {/* Cabecera */}
       <div style={{ ...card, padding: '22px 24px', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ width: 52, height: 52, borderRadius: 13, background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <i className="ti ti-robot" style={{ fontSize: 26, color: '#fff' }} />
-          </div>
+          
+              {entrevista.foto_identidad ? (
+                <img
+                  src={entrevista.foto_identidad}
+                  alt={entrevista.candidato_nombre}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 13,
+                    objectFit: 'cover',
+                    flexShrink: 0,
+                    border: `1px solid ${t.cardBorder}`,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 13,
+                    background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <i className="ti ti-robot" style={{ fontSize: 26, color: '#fff' }} />
+                </div>
+              )}
+
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontSize: 19, fontWeight: 700, color: t.text }}>{entrevista.candidato_nombre}</div>
             <div style={{ fontSize: 13, color: t.textMuted, marginTop: 3 }}>{entrevista.vacante_titulo}</div>
@@ -275,6 +303,30 @@ export default function EntrevistaDetalle() {
               </div>
             </div>
           )}
+          {/* Eventos del navegador durante la entrevista */}
+          {(entrevista.eventos_navegador && entrevista.eventos_navegador.length > 0) && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: t.textMuted, marginBottom: 10 }}>
+                <i className="ti ti-eye-exclamation" style={{ marginRight: 6 }} />Actividad del navegador ({entrevista.eventos_navegador.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {entrevista.eventos_navegador.map((ev, i) => {
+                  const ICONO = {
+                    copiar: 'ti-copy', pegar: 'ti-clipboard', clic_derecho: 'ti-click',
+                    cambio_ventana: 'ti-window-off', cambio_pestana: 'ti-browser-x',
+                  }[ev.tipo] || 'ti-alert-circle';
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 13px', borderRadius: 9, background: t.toggleBg, fontSize: 12.5 }}>
+                      <i className={`ti ${ICONO}`} style={{ fontSize: 16, color: '#f59e0b' }} />
+                      <span style={{ color: t.text, flex: 1 }}>{ev.detalle || ev.tipo}</span>
+                      {ev.timestamp && <span style={{ color: t.textFaint, fontSize: 11 }}>{new Date(ev.timestamp).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12 }}>
             Verificación IA por captura: <span style={{ color: '#10b981' }}>●</span> persona detectada
             {' '}<span style={{ color: '#ef4444' }}>●</span> sin persona

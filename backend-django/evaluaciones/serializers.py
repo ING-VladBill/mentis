@@ -1,5 +1,5 @@
 # ==========================================
-# evaluaciones/serializers.py (Sprint 3 - RRHH)
+# evaluaciones/serializers.py (Sprint 4 - RRHH)
 # ==========================================
 
 import json
@@ -131,14 +131,31 @@ class EntrevistaDetalleSerializer(serializers.ModelSerializer):
     vacante_titulo   = serializers.CharField(source='candidato.vacante.titulo', read_only=True)
     plantilla_nombre = serializers.CharField(source='plantilla.nombre', read_only=True, default=None)
     audio_url        = serializers.SerializerMethodField()
+    foto_identidad   = serializers.SerializerMethodField()
 
     class Meta:
         model  = EntrevistaIA
         fields = ['id', 'candidato_id', 'candidato_nombre', 'vacante_titulo',
                   'estado', 'fecha_inicio', 'fecha_fin', 'duracion_minutos',
                   'nota', 'analisis_dimensiones', 'resumen_ia',
-                  'temas_criticos_cubiertos', 'transcripcion', 'audio_url',
+                  'temas_criticos_cubiertos', 'eventos_navegador', 'transcripcion', 'audio_url', 'foto_identidad',
                   'plantilla_nombre']
 
     def get_audio_url(self, obj):
-        return obj.audio.url if obj.audio else None
+        if not obj.audio:
+            return None
+        # URL absoluta para que el reproductor cargue el audio desde el backend
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.audio.url)
+        return obj.audio.url
+
+    def get_foto_identidad(self, obj):
+        # Primera captura de identidad de la entrevista (para el listado).
+        cap = obj.candidato.capturas_auditoria.filter(
+            origen='entrevista', tipo='identidad_inicial'
+        ).first()
+        if not cap or not cap.imagen:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(cap.imagen.url) if request else cap.imagen.url

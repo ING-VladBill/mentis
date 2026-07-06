@@ -257,6 +257,37 @@ def entrevista_captura(request):
 # ------------------------------------------------------------------
 # RRHH: CRUD de plantillas de evaluación (S4-02)
 # ------------------------------------------------------------------
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def entrevista_evento(request):
+    """
+    Registra un evento de auditoría del NAVEGADOR durante la entrevista:
+    copiar, pegar, cambiar de pestaña, salir de la ventana, clic derecho, etc.
+    Se acumulan en EntrevistaIA.eventos_navegador (JSON).
+    """
+    token, error = _validar_token_entrevista(request.data.get('token', ''))
+    if error:
+        return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
+
+    tipo = request.data.get('tipo', 'desconocido')
+    detalle = request.data.get('detalle', '')
+
+    try:
+        entrevista = EntrevistaIA.objects.get(candidato=token.candidato)
+    except EntrevistaIA.DoesNotExist:
+        return Response({'registrado': False}, status=status.HTTP_200_OK)
+
+    eventos = entrevista.eventos_navegador or []
+    eventos.append({
+        'tipo': tipo,
+        'detalle': detalle,
+        'timestamp': timezone.now().isoformat(),
+    })
+    entrevista.eventos_navegador = eventos
+    entrevista.save(update_fields=['eventos_navegador'])
+    return Response({'registrado': True})
+
+
 class PlantillaEvaluacionViewSet(viewsets.ModelViewSet):
     queryset = PlantillaEvaluacion.objects.prefetch_related('dimensiones').filter(activa=True)
     serializer_class = PlantillaEvaluacionSerializer
@@ -295,9 +326,11 @@ class EntrevistaViewSet(viewsets.ReadOnlyModelViewSet):
     def capturas(self, request, pk=None):
         entrevista = self.get_object()
         capturas = entrevista.candidato.capturas_auditoria.filter(origen='entrevista')
+        # URL ABSOLUTA (http://host:8000/media/...) para que la imagen cargue
+        # desde el backend Django y no desde el front (donde no existe /media/).
         return Response([{
             'id': cap.id, 'tipo': cap.tipo,
-            'url': cap.imagen.url if cap.imagen else None,
+            'url': request.build_absolute_uri(cap.imagen.url) if cap.imagen else None,
             'timestamp': cap.timestamp,
             'es_persona': cap.es_persona,
         } for cap in capturas])

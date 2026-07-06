@@ -13,6 +13,7 @@ from .views_entrevista import (
     entrevista_iniciar,
     entrevista_finalizar,
     entrevista_captura,
+    entrevista_evento,
 )
 
 router = DefaultRouter()
@@ -30,4 +31,5 @@ urlpatterns += [
     path('entrevista/iniciar/',   entrevista_iniciar,   name='entrevista-iniciar'),
     path('entrevista/finalizar/', entrevista_finalizar, name='entrevista-finalizar'),
     path('entrevista/captura/',   entrevista_captura,   name='entrevista-captura'),
+    path('entrevista/evento/',    entrevista_evento,    name='entrevista-evento'),
 ]

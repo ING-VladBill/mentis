@@ -25,7 +25,7 @@ genai.configure(api_key=settings.GEMINI_API_KEY)
 DURACION_MAXIMA_MINUTOS = 40
 
 # Modelo de Gemini Live para conversación voz a voz nativa
-GEMINI_LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-09-2025'
+GEMINI_LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025'
 
 
 # ==========================================================
