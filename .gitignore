@@ -62,3 +62,8 @@ yarn-error.log*
 .env.*.local
 backend-django/.env
 *.env
+
+mentis-android/.gradle/
+mentis-android/app/build/
+mentis-android/build/
+mentis-android/local.properties
