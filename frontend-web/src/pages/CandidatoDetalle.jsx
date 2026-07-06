@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTheme } from '../ThemeContext';
 import api from '../services/api';
+import EntrevistaPanel from './EntrevistaPanel';
+import AccionesTalento from './AccionesTalento';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const ESTADO_CFG = {
@@ -724,6 +726,12 @@ export default function CandidatoDetalle() {
           <NotasCard candidatoId={id} t={t} />
         </div>
       </div>
+
+      {/* Acciones de talento: banco + descarte (Sprint 4) */}
+      <AccionesTalento candidato={c} t={t} />
+
+      {/* Entrevista con EVA — vista 360° (Sprint 4) */}
+      <EntrevistaPanel candidatoId={id} t={t} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiSpring } from '../../services/api';
+import api, { apiSpring } from '../../services/api';
 
 export default function AccesoCandidato() {
   const navigate = useNavigate();
@@ -17,8 +17,23 @@ export default function AccesoCandidato() {
     e.preventDefault();
     setError(null);
     setLoad(true);
+    const tokenLimpio = token.trim();
+
+    // 1) ¿Es un token de ENTREVISTA? (lo valida Django). Si sí, la entrevista
+    //    con EVA vive en su propia pantalla y no pasa por el flujo del examen.
     try {
-      const { data } = await apiSpring.post('/api/usuario/auth/acceso', { token: token.trim() });
+      await api.post('/api/evaluaciones/entrevista/acceso/', { token: tokenLimpio });
+      navigate(`/candidato/entrevista?token=${encodeURIComponent(tokenLimpio)}`);
+      return;
+    } catch (err) {
+      // 404 = no es token de entrevista -> seguimos con el flujo del examen.
+      // Otros errores (500, red) tampoco bloquean: dejamos que el flujo del
+      // examen dé su propio veredicto sobre el token.
+    }
+
+    // 2) Flujo del EXAMEN (Spring Boot), igual que siempre.
+    try {
+      const { data } = await apiSpring.post('/api/usuario/auth/acceso', { token: tokenLimpio });
       localStorage.setItem('candidato_token', data.access);
       localStorage.setItem('candidato_data', JSON.stringify({
         candidato: data.candidato,

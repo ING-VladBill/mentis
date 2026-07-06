@@ -55,6 +55,17 @@ def construir_prompt_entrevista(candidato, entrevista) -> str:
     # ---- Dimensiones a evaluar (de la plantilla) ----
     dimensiones_txt = _dimensiones_texto(entrevista.plantilla)
 
+    # ---- Ritmo según la duración asignada ----
+    if duracion <= 20:
+        ritmo_por_duracion = (f'Solo tienes {duracion} minutos: saluda breve y ve directo a lo importante. '
+                              'Prioriza los temas obligatorios desde el inicio; máximo 1-2 desvíos cortos.')
+    elif duracion <= 30:
+        ritmo_por_duracion = (f'Tienes {duracion} minutos: ritmo equilibrado. Puedes explorar 2-3 desvíos '
+                              'interesantes, pero sin perder de vista los temas obligatorios.')
+    else:
+        ritmo_por_duracion = (f'Tienes {duracion} minutos: puedes explayarte un poco más y profundizar en '
+                              'historias completas, manteniendo siempre la agilidad en tus intervenciones.')
+
     # ---- Instrucción específica del área (HU-07), si existe ----
     instruccion_area = vacante.get_instruccion_ia() if hasattr(vacante, 'get_instruccion_ia') else ''
 
@@ -96,6 +107,12 @@ USA este contexto con inteligencia: si flaqueó en un tema del examen, indaga ah
 3. Los puntos débiles detectados (habilidades faltantes o temas flojos del examen), explorados con tacto.
 4. Expectativas: disponibilidad, y qué espera del trabajo.
 {f'5. Indicación específica del área: {instruccion_area}' if instruccion_area else ''}
+
+# RITMO Y AGILIDAD (crítico — la conversación debe SENTIRSE fluida)
+- Tu presentación inicial: MÁXIMO 2 frases + 1 pregunta rompehielo corta. Nada de monólogos de bienvenida.
+- Reacciona en 1-2 frases y lanza la siguiente pregunta. El candidato debe hablar el 80% del tiempo.
+- NO resumas lo que el candidato acaba de decir antes de preguntar (eso alarga todo). Reacciona corto y pregunta.
+- {ritmo_por_duracion}
 
 # EL TIEMPO (tu única regla dura)
 - La entrevista dura MÁXIMO {duracion} minutos. Administra tú el ritmo.
@@ -157,8 +174,9 @@ def _tono_por_nivel(nivel: str, area: str) -> str:
 def _resumir_examen(candidato) -> str:
     """Resume el desempeño del examen para que la IA sepa dónde indagar."""
     try:
-        examen = candidato.examenes.filter(estado__in=['finalizado', 'expirado']).order_by('-fecha_fin').first()
-        if not examen:
+        # Es una relación OneToOne (related_name='examen'), no un queryset.
+        examen = getattr(candidato, 'examen', None)
+        if not examen or examen.estado not in ('finalizado', 'expirado'):
             return 'Resultado del examen: no disponible.'
         partes = [f'Resultado del examen técnico: {examen.nota}/20.']
         # Categorías donde le fue mal / bien
@@ -217,10 +235,29 @@ def generar_token_efimero_live() -> dict:
     """
     Genera un token efímero para que el FRONTEND se conecte directamente al
     WebSocket de Gemini Live (voz a voz, sin pasar el audio por Django =
-    latencia mínima). El token expira en ~30 min y es de un solo uso,
-    así la API key real NUNCA viaja al navegador.
+    latencia mínima). El token es de un solo uso y expira pronto, así la
+    API key real NUNCA viaja al navegador.
+
+    Formato de la petición según la documentación oficial de Gemini
+    (POST v1alpha/auth_tokens): usa camelCase y tiempos ISO 8601.
     """
     import requests
+    from datetime import datetime, timedelta, timezone
+
+    ahora = datetime.now(timezone.utc)
+    # expireTime: hasta 30 min para MANTENER la sesión abierta.
+    # newSessionExpireTime: hasta cuándo se puede INICIAR la sesión (holgado
+    # para que el usuario tenga tiempo de dar permisos y arrancar).
+    expire_time = (ahora + timedelta(minutes=30)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    new_session_expire = (ahora + timedelta(minutes=3)).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    # No incluimos "bidiGenerateContentSetup" a propósito: si se omite, la
+    # configuración real (modelo, systemInstruction, voz) la determina el
+    # mensaje "setup" que el propio navegador manda al conectar por WebSocket
+    # (así ya funciona nuestro front). Mantenemos la petición del token minimal
+    # para evitar el error "Unknown name" de campos que no existen en el
+    # recurso AuthToken real (liveConnectConstraints es un alias del SDK,
+    # no un campo del JSON crudo del REST).
     resp = requests.post(
         'https://generativelanguage.googleapis.com/v1alpha/auth_tokens',
         headers={
@@ -229,14 +266,43 @@ def generar_token_efimero_live() -> dict:
         },
         json={
             'uses': 1,
-            'expireTime': None,  # default del servicio (30 min)
-            'liveConnectConstraints': {'model': GEMINI_LIVE_MODEL},
+            'expireTime': expire_time,
+            'newSessionExpireTime': new_session_expire,
         },
         timeout=15,
     )
+    if resp.status_code >= 400:
+        logger.error(f'auth_tokens {resp.status_code}: {resp.text[:400]}')
     resp.raise_for_status()
     data = resp.json()
     return {'token': data.get('name', ''), 'modelo': GEMINI_LIVE_MODEL}
+
+
+# ==========================================================
+# 2.5 VALIDACIÓN DE IDENTIDAD: ¿la imagen muestra a una persona?
+# ==========================================================
+
+def validar_persona_en_imagen(imagen_b64: str) -> bool:
+    """
+    Analiza una captura de webcam con Gemini Vision y responde si se ve
+    claramente el rostro de una persona real (no cámara tapada, no una
+    foto de la pared, no oscuridad total). Se usa en la verificación de
+    identidad inicial y en las capturas periódicas de la entrevista.
+    """
+    try:
+        model = genai.GenerativeModel(model_name=settings.GEMINI_MODEL)
+        respuesta = model.generate_content([
+            {'mime_type': 'image/jpeg', 'data': imagen_b64},
+            ('Analiza esta captura de webcam. Responde SOLO con una palabra: '
+             '"SI" si se ve claramente el rostro de una persona real frente a la cámara, '
+             '"NO" si la cámara está tapada, oscura, apunta a otra cosa, o no hay una persona visible.'),
+        ])
+        return 'SI' in respuesta.text.strip().upper()
+    except Exception as e:
+        logger.warning(f'No se pudo validar la imagen con IA: {e}')
+        # Fail-open: ante un fallo del validador no bloqueamos la entrevista;
+        # la captura queda guardada igual para revisión humana de RRHH.
+        return True
 
 
 # ==========================================================

@@ -15,6 +15,7 @@ import Login          from './pages/Login';
 import Usuarios       from './pages/Usuarios';
 import Areas          from './pages/Areas';
 import Ranking        from './pages/Ranking';
+import BancoTalento         from './pages/BancoTalento';
 import CargaMasiva    from './pages/CargaMasiva';
 import Postular       from './pages/Postular';
 import Evaluaciones   from './pages/Evaluaciones';
@@ -95,16 +96,12 @@ function Sidebar() {
     { to: '/evaluaciones', icon: 'ti-clipboard-list', label: 'Evaluaciones' },
     { to: '/auditoria',    icon: 'ti-shield-check',   label: 'Auditoría'    },
     { to: '/ranking',      icon: 'ti-trophy',         label: 'Ranking'      },
+    { to: '/banco-talento', icon: 'ti-star',          label: 'Banco de talento' },
     { to: '/carga-masiva', icon: 'ti-files',          label: 'Carga masiva' },
     { to: '/areas',        icon: 'ti-layout-grid',    label: 'Áreas'        },
     { to: '/usuarios',     icon: 'ti-users-group',    label: 'Usuarios'     },
   ];
 
-  const NAV_SOON = [
-    { icon: 'ti-robot',     label: 'Entrevistas IA' },
-    { icon: 'ti-chart-bar', label: 'Resultados'     },
-    { icon: 'ti-settings',  label: 'Configuración'  },
-  ];
 
   async function handleLogout() {
     try {
@@ -172,31 +169,8 @@ function Sidebar() {
           </NavLink>
         ))}
 
-        <div style={{ fontSize: 10, color: t.textFaint, letterSpacing: '0.14em', padding: '18px 10px 8px', fontWeight: 600 }}>PRÓXIMOS SPRINTS</div>
-        {NAV_SOON.map(({ icon, label }) => (
-          <div key={label} style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '8px 12px', borderRadius: 8, marginBottom: 2,
-            fontSize: 13.5, color: t.textFaint, cursor: 'not-allowed',
-          }}>
-            <i className={`ti ${icon}`} style={{ fontSize: 17 }} />
-            {label}
-            <span style={{ marginLeft: 'auto', fontSize: 10, background: t.toggleBg, color: t.textFaint, padding: '2px 7px', borderRadius: 5 }}>Pronto</span>
-          </div>
-        ))}
       </nav>
 
-      {/* Sprint badge */}
-      <div style={{
-        padding: '10px 14px', margin: '0 10px 10px', borderRadius: 10,
-        background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.18)',
-      }}>
-        <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, marginBottom: 2 }}>Sprint 3 — En progreso</div>
-        <div style={{ fontSize: 10.5, color: t.textFaint }}>Flujo candidato + correos</div>
-        <div style={{ marginTop: 8, background: t.toggleBg, borderRadius: 4, height: 4 }}>
-          <div style={{ width: '60%', height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,#7c3aed,#6d28d9)' }} />
-        </div>
-      </div>
 
       {/* Dark mode toggle */}
       <div style={{ padding: '10px 14px', borderTop: `1px solid ${t.sidebarBorder}` }}>
@@ -286,6 +260,7 @@ const PAGE_META = {
   '/candidatos/registrar': { title: 'Registrar candidato', subtitle: 'Agregar nuevo postulante' },
   '/evaluaciones':         { title: 'Evaluaciones',        subtitle: 'Exámenes técnicos de candidatos' },
   '/auditoria':            { title: 'Auditoría',           subtitle: 'Integridad de exámenes y eventos de proctoring' },
+  '/banco-talento':        { title: 'Banco de talento',    subtitle: 'Candidatos destacados guardados para futuras vacantes' },
   '/carga-masiva':         { title: 'Carga masiva',        subtitle: 'Sube múltiples CVs en un solo lote' },
   '/areas':                { title: 'Áreas',               subtitle: 'Gestión de áreas y etiquetas' },
   '/usuarios':             { title: 'Usuarios',            subtitle: 'Equipo de recursos humanos' },
@@ -328,6 +303,7 @@ function Layout() {
             <Route path="/candidatos/registrar"  element={<ProtectedRoute><CandidatoForm /></ProtectedRoute>} />
             <Route path="/candidatos/:id"        element={<ProtectedRoute><CandidatoDetalle /></ProtectedRoute>} />
             <Route path="/ranking"               element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+            <Route path="/banco-talento"         element={<ProtectedRoute><BancoTalento /></ProtectedRoute>} />
             <Route path="/evaluaciones"          element={<ProtectedRoute><Evaluaciones /></ProtectedRoute>} />
             <Route path="/evaluaciones/:id"      element={<ProtectedRoute><ExamenDetalle /></ProtectedRoute>} />
             <Route path="/auditoria"             element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />

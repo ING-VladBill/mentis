@@ -1,5 +1,5 @@
 # ==========================================
-# evaluaciones/models.py (Sprint 3 - completo)
+# evaluaciones/models.py (Sprint 4 completo)
 # REEMPLAZA tu evaluaciones/models.py actual.
 # Luego: python manage.py makemigrations evaluaciones && python manage.py migrate
 # Django es el DUEÑO del esquema. Spring Boot solo usa estas tablas.
@@ -209,6 +209,8 @@ class CapturaAuditoria(models.Model):
     origen    = models.CharField(max_length=15, choices=ORIGEN_CHOICES)
     imagen    = models.ImageField(upload_to='auditoria/%Y/%m/')
     timestamp = models.DateTimeField(auto_now_add=True)
+    es_persona = models.BooleanField(null=True, blank=True,
+                    help_text='Validación IA: ¿la captura muestra a una persona? null = sin validar')
 
     class Meta:
         db_table = 'capturas_auditoria'

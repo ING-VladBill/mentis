@@ -33,6 +33,7 @@ from .servicios.entrevista_ia import (
     construir_prompt_entrevista,
     elegir_plantilla_para_vacante,
     generar_token_efimero_live,
+    validar_persona_en_imagen,
 )
 
 logger = logging.getLogger(__name__)
@@ -229,6 +230,27 @@ def entrevista_captura(request):
         ContentFile(contenido),
         save=True,
     )
+
+    # Verificación con IA: ¿la imagen muestra realmente a una persona?
+    # - identidad_inicial: SÍNCRONA (el front espera el veredicto para dejar pasar
+    #   al candidato; si tapó la cámara o apunta a otra cosa, se le pide reencuadrar).
+    # - periódica: en segundo plano (no interrumpe la entrevista); el resultado
+    #   queda guardado para el semáforo de auditoría de RRHH.
+    if tipo == 'identidad_inicial':
+        es_persona = validar_persona_en_imagen(imagen_b64)
+        captura.es_persona = es_persona
+        captura.save(update_fields=['es_persona'])
+        return Response({'registrado': True, 'tipo': tipo, 'es_persona': es_persona})
+
+    import threading
+    def _validar_bg(cap_id, img_b64):
+        try:
+            resultado = validar_persona_en_imagen(img_b64)
+            CapturaAuditoria.objects.filter(id=cap_id).update(es_persona=resultado)
+        except Exception as e:
+            logger.warning(f'Validación en background falló (captura {cap_id}): {e}')
+    threading.Thread(target=_validar_bg, args=(captura.id, imagen_b64), daemon=True).start()
+
     return Response({'registrado': True, 'tipo': tipo})
 
 
@@ -262,6 +284,13 @@ class EntrevistaViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EntrevistaDetalleSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        candidato_id = self.request.query_params.get('candidato_id')
+        if candidato_id:
+            qs = qs.filter(candidato_id=candidato_id)
+        return qs
+
     @action(detail=True, methods=['get'], url_path='capturas')
     def capturas(self, request, pk=None):
         entrevista = self.get_object()
@@ -270,4 +299,5 @@ class EntrevistaViewSet(viewsets.ReadOnlyModelViewSet):
             'id': cap.id, 'tipo': cap.tipo,
             'url': cap.imagen.url if cap.imagen else None,
             'timestamp': cap.timestamp,
+            'es_persona': cap.es_persona,
         } for cap in capturas])
