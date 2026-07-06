@@ -64,6 +64,7 @@ urlpatterns = [
     # Lista y detalle de exámenes técnicos (gestionados por Spring Boot, pero Django es el dueño del esquema)
     # ------------------------------------------
     path('api/evaluaciones/', include('evaluaciones.urls')),
+    path('api/entrevista/',   include('evaluaciones.urls')),
     # ------------------------------------------
     # API REST (router)
     # ------------------------------------------

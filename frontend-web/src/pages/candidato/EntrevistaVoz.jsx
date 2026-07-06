@@ -382,6 +382,15 @@ export default function EntrevistaVoz() {
     };
 
     ws.onerror = () => { setError('Se perdió la conexión de voz. Recarga para reintentar — tu progreso está guardado.'); setFase('error'); };
+
+    ws.onclose = (event) => {
+      // Si ya estamos finalizando o terminados, el cierre es esperado — ignorar
+      if (cerrandoRef.current || ['finalizando', 'terminada', 'error'].includes(fase)) return;
+      // Cierre inesperado durante la entrevista → mostrar error con opción de reintentar
+      console.warn('WebSocket cerrado inesperadamente', event.code, event.reason);
+      setError('La conexión con EVA se interrumpió. Tu progreso está guardado — recarga para continuar.');
+      setFase('error');
+    };
   }
 
   function agregarTranscripcion(quien, texto) {

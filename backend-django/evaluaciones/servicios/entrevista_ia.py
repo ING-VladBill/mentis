@@ -254,10 +254,11 @@ def generar_token_efimero_live() -> dict:
 
     ahora = datetime.now(timezone.utc)
     # expireTime: hasta 30 min para MANTENER la sesión abierta.
-    # newSessionExpireTime: hasta cuándo se puede INICIAR la sesión (holgado
-    # para que el usuario tenga tiempo de dar permisos y arrancar).
+    # newSessionExpireTime: hasta cuándo se puede INICIAR la sesión.
+    # Era 3 min — insuficiente si el candidato pasa por consentimiento,
+    # encuadre y verificación antes de conectar. Subido a 10 min.
     expire_time = (ahora + timedelta(minutes=30)).strftime('%Y-%m-%dT%H:%M:%SZ')
-    new_session_expire = (ahora + timedelta(minutes=3)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    new_session_expire = (ahora + timedelta(minutes=10)).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # No incluimos "bidiGenerateContentSetup" a propósito: si se omite, la
     # configuración real (modelo, systemInstruction, voz) la determina el
