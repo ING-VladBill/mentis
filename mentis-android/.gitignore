@@ -1,2 +1,9 @@
 
 *.hprof
+# Local configuration file (sdk path, etc.)
+local.properties
+
+# Kotlin compiler cache
+.kotlin/
+.gradle/
+build/
