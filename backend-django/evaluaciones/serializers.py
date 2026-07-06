@@ -31,6 +31,7 @@ class PreguntaExamenSerializer(serializers.ModelSerializer):
 class ExamenDetalleSerializer(serializers.ModelSerializer):
     """Examen calificado con todas sus preguntas. Vista completa para RRHH."""
     preguntas       = PreguntaExamenSerializer(many=True, read_only=True)
+    candidato_id     = serializers.IntegerField(source='candidato.id', read_only=True)
     candidato_nombre = serializers.CharField(source='candidato.nombre_completo', read_only=True)
     vacante_titulo   = serializers.CharField(source='vacante.titulo', read_only=True)
     nota_minima      = serializers.DecimalField(source='vacante.nota_minima_examen',
@@ -44,7 +45,7 @@ class ExamenDetalleSerializer(serializers.ModelSerializer):
             'id', 'estado', 'duracion_minutos', 'total_preguntas',
             'fecha_generacion', 'fecha_inicio', 'fecha_fin',
             'nota', 'aprobado', 'nota_minima',
-            'candidato_nombre', 'vacante_titulo',
+            'candidato_id', 'candidato_nombre', 'vacante_titulo',
             'total_respondidas', 'total_correctas',
             'preguntas',
         ]
@@ -151,10 +152,18 @@ class EntrevistaDetalleSerializer(serializers.ModelSerializer):
         return obj.audio.url
 
     def get_foto_identidad(self, obj):
-        # Primera captura de identidad de la entrevista (para el listado).
-        cap = obj.candidato.capturas_auditoria.filter(
+        # La foto de identidad para mostrar debe ser la que SÍ pasó la
+        # verificación de persona (es_persona=True). Si el candidato tuvo la
+        # cámara tapada en su primer intento y tuvo que reencuadrar, esa
+        # primera captura fallida NO debe mostrarse como su foto.
+        capturas = obj.candidato.capturas_auditoria.filter(
             origen='entrevista', tipo='identidad_inicial'
-        ).first()
+        ).order_by('timestamp')
+        cap = capturas.filter(es_persona=True).first()
+        if not cap:
+            # Nada validado como persona (caso raro) -> mostramos igual la
+            # última captura disponible, mejor que no mostrar nada.
+            cap = capturas.last()
         if not cap or not cap.imagen:
             return None
         request = self.context.get('request')

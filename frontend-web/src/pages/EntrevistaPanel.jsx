@@ -155,7 +155,23 @@ export default function EntrevistaPanel({ candidatoId, t }) {
           <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 7 }}>
             <i className="ti ti-headphones" style={{ marginRight: 5 }} />Audio completo de la conversación
           </div>
-          <audio controls src={entrevista.audio_url} style={{ width: '100%', height: 38 }} />
+          <audio controls src={entrevista.audio_url} style={{ width: '100%', height: 38 }}
+            onLoadedMetadata={(e) => {
+                  // Los .webm grabados con MediaRecorder no incluyen la
+                  // duración en el encabezado del contenedor -> el navegador
+                  // la reporta como Infinity y la barra de progreso "salta"
+                  // al final al reproducir. Este truco fuerza al navegador a
+                  // recalcularla escaneando el archivo.
+                  const audio = e.currentTarget;
+                  if (!isFinite(audio.duration)) {
+                    audio.currentTime = 1e101;
+                    const fijarDuracion = () => {
+                      audio.currentTime = 0;
+                      audio.removeEventListener('timeupdate', fijarDuracion);
+                    };
+                    audio.addEventListener('timeupdate', fijarDuracion);
+                  }
+                }} />
         </div>
       )}
 

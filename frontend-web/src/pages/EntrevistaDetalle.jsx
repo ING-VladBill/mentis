@@ -259,7 +259,23 @@ export default function EntrevistaDetalle() {
               <div style={{ fontSize: 12.5, fontWeight: 700, color: t.textMuted, marginBottom: 10 }}>
                 <i className="ti ti-headphones" style={{ marginRight: 6 }} />Grabación de la conversación (candidato + EVA)
               </div>
-              <audio controls src={entrevista.audio_url} style={{ width: '100%', height: 40 }} />
+              <audio controls src={entrevista.audio_url} style={{ width: '100%', height: 40 }}
+                onLoadedMetadata={(e) => {
+                  // Los .webm grabados con MediaRecorder no incluyen la
+                  // duración en el encabezado del contenedor -> el navegador
+                  // la reporta como Infinity y la barra de progreso "salta"
+                  // al final al reproducir. Este truco fuerza al navegador a
+                  // recalcularla escaneando el archivo.
+                  const audio = e.currentTarget;
+                  if (!isFinite(audio.duration)) {
+                    audio.currentTime = 1e101;
+                    const fijarDuracion = () => {
+                      audio.currentTime = 0;
+                      audio.removeEventListener('timeupdate', fijarDuracion);
+                    };
+                    audio.addEventListener('timeupdate', fijarDuracion);
+                  }
+                }} />
             </div>
           )}
         </div>

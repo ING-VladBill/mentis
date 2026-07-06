@@ -141,6 +141,9 @@ export default function EntrevistaVoz() {
   const audioListoRef = useRef(null);
   const micActivoRef = useRef(true);
   const cerrandoRef = useRef(false);
+  const hablandoRef = useRef(false);     // true mientras EVA está emitiendo audio (su turno)
+  const avisoPendienteRef = useRef(false); // aviso de 5min en espera de que EVA termine de hablar
+  const pausaMicRef = useRef(false);     // silencia el envío del mic un instante al inyectar el aviso
   const nextPlayTimeRef = useRef(0);   // reproducción agendada sin gaps
   const evaRef = useRef(null);         // posición de EVA para calcular la mirada
   const lastMouseRef = useRef(0);
@@ -347,6 +350,7 @@ export default function EntrevistaVoz() {
       if (c.outputTranscription?.text) {
         agregarTranscripcion('EVA', c.outputTranscription.text);
         setEmocionBase('hablando');
+        hablandoRef.current = true;
         clearTimeout(pensandoTimeoutRef.current);
         setCaption(prev => (prev + c.outputTranscription.text).slice(-160));
         const g = detectarGesto(c.outputTranscription.text);
@@ -357,14 +361,22 @@ export default function EntrevistaVoz() {
       }
       if (c.turnComplete) {
         setEmocionBase('escuchando');
+        hablandoRef.current = false;
         setCaption('');
         clearTimeout(pensandoTimeoutRef.current);
         pensandoTimeoutRef.current = setTimeout(() => setEmocionBase('pensando'), 6000);
+        // Si el aviso de "quedan 5 minutos" estaba esperando a que EVA
+        // terminara su turno actual, recién ahora es seguro inyectarlo.
+        if (avisoPendienteRef.current) {
+          avisoPendienteRef.current = false;
+          enviarAvisoCierre();
+        }
       }
       if (c.interrupted) {
         // El candidato interrumpió: cortar la reproducción pendiente al instante
         nextPlayTimeRef.current = 0;
         setEmocionBase('escuchando');
+        hablandoRef.current = false;
         setCaption('');
       }
     };
@@ -437,7 +449,7 @@ export default function EntrevistaVoz() {
     const worklet = new AudioWorkletNode(ctx, 'pcm-processor');
     workletRef.current = worklet;
     worklet.port.onmessage = (e) => {
-      if (!micActivoRef.current) return;
+      if (!micActivoRef.current || pausaMicRef.current) return;
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         const b64 = btoa(String.fromCharCode(...new Uint8Array(e.data)));
         wsRef.current.send(JSON.stringify({
@@ -475,19 +487,43 @@ export default function EntrevistaVoz() {
   }
 
   // ---------------- 7. Timer ----------------
+  // El aviso de "quedan 5 minutos" es un turno MANUAL (clientContent) que
+  // convive con el streaming continuo del micrófono (detección automática
+  // de voz). Inyectarlo mientras EVA está a mitad de su propio turno de
+  // audio, o mientras el micrófono sigue empujando audio en paralelo,
+  // puede confundir el manejo de turnos de Gemini y dejar la sesión
+  // colgada (el síntoma exacto que reportaste). Por eso:
+  //   1) si EVA está hablando, esperamos a que termine su turno (turnComplete)
+  //      antes de inyectar el aviso — nunca a mitad de una frase suya.
+  //   2) al inyectarlo, silenciamos brevemente el envío del micrófono para
+  //      que no haya un turno de audio "abierto" en paralelo.
+  function enviarAvisoCierre() {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+    pausaMicRef.current = true;
+    setTimeout(() => {
+      wsRef.current?.send(JSON.stringify({
+        clientContent: {
+          turns: [{ role: 'user', parts: [{ text: '[SISTEMA: quedan 5 minutos. Empieza a cerrar la entrevista cubriendo los temas críticos pendientes.]' }] }],
+          turnComplete: true,
+        },
+      }));
+      setTimeout(() => { pausaMicRef.current = false; }, 400);
+    }, 300);
+  }
+
   function iniciarTimer() {
     timerRef.current = setInterval(() => {
       setSegundos(prev => {
         if (prev <= 1) { finalizar(); return 0; }
         if (prev === 300) {
           cerrandoRef.current = true;
-          if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-              clientContent: {
-                turns: [{ role: 'user', parts: [{ text: '[SISTEMA: quedan 5 minutos. Empieza a cerrar la entrevista cubriendo los temas críticos pendientes.]' }] }],
-                turnComplete: true,
-              },
-            }));
+          if (hablandoRef.current) {
+            // EVA está hablando ahora mismo: esperamos a que termine su
+            // turno (ver el manejador de turnComplete) para no cortarla
+            // ni dejar dos turnos abiertos a la vez.
+            avisoPendienteRef.current = true;
+          } else {
+            enviarAvisoCierre();
           }
         }
         return prev - 1;
