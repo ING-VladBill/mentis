@@ -1,5 +1,5 @@
 # ==========================================
-# vacantes/views.py (Sprint 2 - completo)
+# vacantes/views.py (Sprint 4 - completo)
 # ==========================================
 
 import json
@@ -534,6 +534,41 @@ class VacanteViewSet(viewsets.ModelViewSet):
 # ==========================================
 # FORMULARIO PÚBLICO DE POSTULACIÓN (sin login)
 # ==========================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def formulario_publico_vacantes(request):
+    """
+    GET /api/vacantes/publicas/
+    Lista pública (sin login) de todas las vacantes abiertas que aceptan
+    postulaciones en línea. La consume la app móvil para mostrar el listado
+    de vacantes y permitir postular.
+    """
+    vacantes = (Vacante.objects
+                .select_related('area')
+                .filter(estado='abierta', confidencial=False)
+                .order_by('-fecha_publicacion', '-id'))
+
+    data = []
+    for v in vacantes:
+        if v.esta_completa:
+            continue  # no mostrar vacantes que ya cubrieron todas sus posiciones
+        data.append({
+            'codigo':                 v.codigo,
+            'titulo':                 v.titulo,
+            'area':                   v.area.nombre if v.area else 'General',
+            'nivel':                  v.get_nivel_experiencia_display(),
+            'modalidad':              v.get_modalidad_display(),
+            'ciudad':                 v.ciudad,
+            'tipo_contrato':          v.get_tipo_contrato_display(),
+            'salario_minimo':         str(v.salario_minimo) if (v.mostrar_salario and v.salario_minimo) else None,
+            'salario_maximo':         str(v.salario_maximo) if (v.mostrar_salario and v.salario_maximo) else None,
+            'moneda':                 v.moneda if v.mostrar_salario else None,
+            'posiciones_disponibles': v.posiciones_disponibles,
+        })
+
+    return Response({'total': len(data), 'vacantes': data})
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

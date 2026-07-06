@@ -20,7 +20,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,10.0.2.2').split
 
 # CSRF: dominios de confianza para el admin en producción (Railway/HTTPS)
 _csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()]
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,10.0.2.2').split(',')
 
 # ------------------------------------------
 # APLICACIONES
@@ -91,9 +91,17 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
+        # ── OPTIMIZACIÓN DE LATENCIA ──
+        # La BD está en Railway (remota). Sin esto, Django abría una conexión
+        # NUEVA a MySQL en CADA request: handshake TCP+auth remoto de cientos
+        # de ms antes de ejecutar cualquier query. CONN_MAX_AGE mantiene la
+        # conexión viva y la reutiliza entre requests (conexiones persistentes).
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'connect_timeout': 10,
         },
     }
 }

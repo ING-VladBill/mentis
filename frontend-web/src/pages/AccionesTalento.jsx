@@ -54,10 +54,10 @@ export default function AccionesTalento({ candidato, t }) {
     <>
       <div style={{
         display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 20,
-        padding: '14px 18px', borderRadius: 14, background: t.cardBg,
+        padding: '14px 18px', borderRadius: 14, background: t.card,
         border: `1px solid ${t.cardBorder}`, animation: 'fadeInUp 0.35s ease both',
       }}>
-        <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+        <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } } @keyframes modalPop { from { opacity: 0; transform: scale(0.94) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }`}</style>
 
         <div style={{ fontSize: 12.5, fontWeight: 700, color: t.textMuted, marginRight: 'auto' }}>
           <i className="ti ti-star" style={{ marginRight: 6, color: '#f59e0b' }} />
@@ -73,7 +73,7 @@ export default function AccionesTalento({ candidato, t }) {
             background: enBanco ? 'rgba(245,158,11,0.14)' : t.toggleBg,
             color: enBanco ? '#f59e0b' : t.textMuted,
           }}>
-          <i className={cargandoBanco ? 'ti ti-loader-2' : (enBanco ? 'ti ti-star-filled' : 'ti ti-star')}
+          <i className={cargandoBanco ? 'ti ti-loader-2' : (enBanco ? 'ti ti-star' : 'ti ti-star')}
              style={cargandoBanco ? { animation: 'spin 1s linear infinite' } : {}} />
           {enBanco ? 'En el banco de talento' : 'Guardar en banco de talento'}
         </button>
@@ -96,9 +96,9 @@ export default function AccionesTalento({ candidato, t }) {
 
       {/* Modal de descarte */}
       {modalAbierto && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, animation: 'fadeInUp 0.2s ease both' }}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,15,20,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, animation: 'modalFade 0.2s ease both' }}
           onClick={(e) => { if (e.target === e.currentTarget && !descartando) setModalAbierto(false); }}>
-          <div style={{ width: 440, maxWidth: '90vw', background: t.cardBg, borderRadius: 16, border: `1px solid ${t.cardBorder}`, padding: '24px 26px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <div style={{ width: 440, maxWidth: '90vw', background: '#1e1e24', borderRadius: 16, border: `1px solid ${t.cardBorder}`, padding: '24px 26px', boxShadow: '0 24px 70px rgba(0,0,0,0.55)', animation: 'modalPop 0.22s cubic-bezier(0.34,1.4,0.5,1) both' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <i className="ti ti-user-x" style={{ fontSize: 18, color: '#ef4444' }} />

@@ -687,7 +687,7 @@ export default function CandidatoDetalle() {
             {secTitle('ti-calendar', 'Auditoría')}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <InfoField label="Fecha de postulación" value={c.fecha_postulacion ? new Date(c.fecha_postulacion).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' }) : null} t={t} />
-              <InfoField label="Registrado por"       value={c.registrado_por}     t={t} />
+              <InfoField label="Registrado por"       value={c.registrado_por_nombre || c.registrado_por} t={t} />
               <InfoField label="Aprobado por"         value={c.aprobado_por}       t={t} />
               <InfoField label="Nota de aprobación"   value={c.nota_aprobacion}    t={t} />
               <InfoField label="Observaciones RRHH"   value={c.observaciones_rrhh} t={t} />

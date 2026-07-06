@@ -317,9 +317,19 @@ export default function EntrevistaVoz() {
 
       if (msg.setupComplete) {
         setFase('en_curso');
-        setEmocionBase('escuchando');
+        setEmocionBase('pensando');
         iniciarTimer();
         await iniciarMicrofono();
+        // EVA rompe el hielo: le pedimos que salude ella primero, para dar
+        // contexto de que la entrevista ya arrancó (no esperar al candidato).
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            clientContent: {
+              turns: [{ role: 'user', parts: [{ text: '[SISTEMA: La entrevista acaba de comenzar. Saluda tú primero al candidato, preséntate brevemente como EVA y haz tu primera pregunta rompehielo. No esperes a que el candidato hable.]' }] }],
+              turnComplete: true,
+            },
+          }));
+        }
         return;
       }
 
@@ -651,9 +661,13 @@ export default function EntrevistaVoz() {
         )}
 
         {fase === 'conectando' && (
-          <div style={st.centerCol}>
-            <div ref={evaRef}><Eva emocion="pensando" size={160} gaze={gaze} /></div>
-            <p style={st.softText}>Conectando con EVA…</p>
+          <div style={{ ...st.centerCol, animation: 'fadeUp 0.4s ease both' }}>
+            <div ref={evaRef}><Eva emocion="pensando" size={180} gaze={gaze} /></div>
+            <h2 style={{ ...st.h1, fontSize: 19 }}>Preparando tu entrevista…</h2>
+            <p style={st.lead}>EVA está organizando la conversación. Esto toma solo unos segundos.</p>
+            <div style={st.dotsLoader}>
+              <span style={st.dot} /><span style={{ ...st.dot, animationDelay: '0.2s' }} /><span style={{ ...st.dot, animationDelay: '0.4s' }} />
+            </div>
           </div>
         )}
 
@@ -763,6 +777,8 @@ const st = {
   lead: { fontSize: 15, color: '#4b5563', lineHeight: 1.65, margin: '4px 0 0' },
   hint: { fontSize: 12.5, color: '#9ca3af', lineHeight: 1.6, margin: '14px 0 0', maxWidth: 420 },
   softText: { fontSize: 14, color: '#6b7280', marginTop: 20 },
+  dotsLoader: { display: 'flex', gap: 7, marginTop: 22 },
+  dot: { width: 9, height: 9, borderRadius: '50%', background: '#7c3aed', animation: 'dotPulse 1.4s ease-in-out infinite' },
   escuchaChip: { display: 'flex', alignItems: 'center', gap: 9, marginTop: 20, minHeight: 26, fontSize: 14.5, fontWeight: 600, color: '#374151' },
   captionBox: { minHeight: 52, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', marginTop: 6 },
   caption: { fontSize: 13.5, color: '#6b7280', fontStyle: 'italic', lineHeight: 1.55, maxWidth: 460, margin: 0, animation: 'fadeUp 0.3s ease both' },
@@ -792,6 +808,7 @@ const st = {
 const cssGlobal = `
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes dotPulse { 0%,100% { transform: scale(0.7); opacity: 0.4; } 50% { transform: scale(1.1); opacity: 1; } }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes breathe-slow { 0%,100% { transform: scale(1); } 50% { transform: scale(1.025); } }
 @keyframes breathe-active { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }

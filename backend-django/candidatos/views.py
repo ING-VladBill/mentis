@@ -1,5 +1,5 @@
 # ==========================================
-# candidatos/views.py (Sprint 2 - completo)
+# candidatos/views.py 
 # ==========================================
 
 import threading
@@ -24,7 +24,7 @@ from .serializers import (
     TagSerializer,
 )
 from .servicios.analisis_cv import analizar_cv, extraer_texto_pdf, procesar_cv_individual
-from .servicios.correos import enviar_correo_avance_cv
+from .servicios.correos import enviar_correo_avance_cv, enviar_correo_avance_examen, enviar_correo_finalista
 from mentis_backend.permissions import EsReclutadorOAdmin, EsAdmin
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,89 @@ class TagViewSet(viewsets.ModelViewSet):
 # ==========================================
 # CANDIDATO VIEWSET
 # ==========================================
+
+from django.conf import settings as django_settings
+from rest_framework.decorators import api_view, permission_classes as drf_permission_classes
+from rest_framework.permissions import AllowAny
+
+
+@api_view(['POST'])
+@drf_permission_classes([AllowAny])
+def notificar_avance_examen(request, candidato_id):
+    """
+    Endpoint interno llamado por el Spring Boot justo después de calificar un examen.
+    Envía automáticamente el correo correspondiente (entrevista si aprobó).
+    Protegido con una clave compartida (lo llama otro backend, no un navegador).
+    """
+    clave_recibida = request.headers.get('X-Internal-Key', '')
+    clave_esperada = getattr(django_settings, 'INTERNAL_SERVICE_KEY', '')
+    if not clave_esperada or clave_recibida != clave_esperada:
+        return Response({'error': 'No autorizado.'}, status=401)
+
+    try:
+        candidato = Candidato.objects.get(id=candidato_id)
+    except Candidato.DoesNotExist:
+        return Response({'error': 'Candidato no encontrado.'}, status=404)
+
+    if candidato.estado != 'examen_aprobado':
+        return Response({'mensaje': f'Sin acción: estado actual es "{candidato.estado}".'})
+
+    from .servicios.correos import enviar_correo_avance_examen, enviar_correo_alerta_riesgo_rrhh
+    from .models import Notificacion
+
+    # --- Regla de negocio: si el examen tuvo RIESGO ALTO de auditoría, NO se
+    # envía la entrevista automáticamente. Queda en revisión manual de RRHH. ---
+    puntaje_riesgo = _calcular_riesgo_examen(candidato)
+
+    if puntaje_riesgo is not None and puntaje_riesgo > 18:  # umbral 'rojo'
+        # 1) Notificación interna (campana del sistema)
+        Notificacion.objects.create(
+            tipo='riesgo_examen',
+            titulo=f'Revisar examen de {candidato.nombre_completo}',
+            mensaje=(f'{candidato.nombre_completo} aprobó el examen de "{candidato.vacante.titulo}", '
+                     f'pero la auditoría detectó RIESGO ALTO (puntaje {puntaje_riesgo}). '
+                     'La entrevista NO se envió automáticamente: revisa el examen y, si procede, '
+                     'reenvía la etapa manualmente desde su ficha.'),
+            candidato=candidato,
+        )
+        # 2) Correo a los reclutadores/admins
+        try:
+            enviar_correo_alerta_riesgo_rrhh(candidato, puntaje_riesgo)
+        except Exception as e:
+            logging.getLogger(__name__).warning(f'No se pudo enviar alerta de riesgo a RRHH: {e}')
+
+        return Response({
+            'mensaje': 'Examen aprobado con riesgo alto. Retenido para revisión manual de RRHH.',
+            'riesgo': puntaje_riesgo,
+            'correo_entrevista_enviado': False,
+        })
+
+    # Riesgo aceptable -> flujo normal: enviar la entrevista
+    enviado = enviar_correo_avance_examen(candidato)
+    if not enviado:
+        return Response({'error': 'No se pudo enviar el correo de entrevista.'}, status=500)
+
+    return Response({
+        'mensaje': f'Correo de entrevista enviado a {candidato.email}.',
+        'correo_entrevista_enviado': True,
+    })
+
+
+def _calcular_riesgo_examen(candidato):
+    """
+    Suma el puntaje de riesgo de auditoría del examen del candidato.
+    Mismo criterio que el endpoint de auditoría (baja=1, media=3, alta=6).
+    Devuelve None si no hay examen con eventos.
+    """
+    PESOS = {'baja': 1, 'media': 3, 'alta': 6}
+    examen = getattr(candidato, 'examen', None)
+    if not examen:
+        return None
+    total = 0
+    for e in examen.eventos.all():
+        total += PESOS.get(e.severidad or 'baja', 1)
+    return total
+
 
 class CandidatoViewSet(viewsets.ModelViewSet):
     parser_classes  = [MultiPartParser, FormParser, JSONParser]
@@ -218,18 +301,30 @@ class CandidatoViewSet(viewsets.ModelViewSet):
         resultados = []
         exitosos = fallidos = 0
         for archivo in archivos:
-            res = procesar_cv_individual(archivo, vacante_id, request.user)
+            try:
+                res = procesar_cv_individual(archivo, vacante_id, request.user)
+            except Exception as e:
+                # Defensa final: un fallo inesperado en un archivo NO debe tumbar
+                # el resto de la carga masiva.
+                res = {'exito': False, 'error': f'Error inesperado: {e}', 'archivo': archivo.name}
             resultados.append(res)
             if res['exito']:
                 exitosos += 1
             else:
                 fallidos += 1
 
+        # IMPORTANTE: el lote SIEMPRE se "procesó" exitosamente como petición HTTP,
+        # incluso si todos los archivos individuales fallaron (ej: CVs corruptos).
+        # Por eso usamos siempre un status 2xx: así el frontend (axios) entra al
+        # camino de "éxito" y muestra el detalle por archivo en todos los casos,
+        # en vez de perder esa información en un manejo de error genérico.
+        # Un 400 real queda reservado para peticiones mal formadas (sin vacante_id,
+        # sin archivos, archivos no-PDF), que ya se validan más arriba.
         return Response({
             'total': len(archivos), 'exitosos': exitosos, 'fallidos': fallidos,
             'detalle': resultados,
             'mensaje': f'Se procesaron {exitosos} CVs correctamente. {fallidos} tuvieron errores.',
-        }, status=201 if exitosos > 0 else 400)
+        }, status=201 if fallidos == 0 else 200)
 
     # ------------------------------------------
     # RANKING
@@ -252,6 +347,110 @@ class CandidatoViewSet(viewsets.ModelViewSet):
                 c.save(update_fields=['posicion_ranking'])
 
         return Response({'total': candidatos.count(), 'ranking': CandidatoRankingSerializer(candidatos, many=True).data})
+
+    # ------------------------------------------
+    # REENVIAR CORREO SEGÚN ETAPA ACTUAL
+    # ------------------------------------------
+    @action(detail=True, methods=['post'], url_path='reenviar-correo-etapa')
+    def reenviar_correo_etapa(self, request, pk=None):
+        """
+        Reenvía el correo correspondiente a la etapa ACTUAL del candidato.
+        Solo disponible si el candidato superó al menos el filtro de CV.
+        - cv_aprobado / examen_pendiente / examen_en_curso  -> correo de examen
+        - examen_aprobado / entrevista_pendiente / entrevista_en_curso -> correo de entrevista IA
+        - entrevista_completada / finalista -> correo de finalista
+        """
+        candidato = self.get_object()
+
+        # Mapeo estado -> (función de correo, etiqueta legible)
+        mapa_estados = {
+            'cv_aprobado':           (enviar_correo_avance_cv,      'examen escrito'),
+            'examen_pendiente':      (enviar_correo_avance_cv,      'examen escrito'),
+            'examen_en_curso':       (enviar_correo_avance_cv,      'examen escrito'),
+
+            'examen_aprobado':       (enviar_correo_avance_examen,  'entrevista con IA'),
+            'entrevista_pendiente':  (enviar_correo_avance_examen,  'entrevista con IA'),
+            'entrevista_en_curso':   (enviar_correo_avance_examen,  'entrevista con IA'),
+
+            'entrevista_completada': (enviar_correo_finalista,      'resultado de finalista'),
+            'finalista':             (enviar_correo_finalista,      'resultado de finalista'),
+        }
+
+        if candidato.estado not in mapa_estados:
+            return Response({
+                'error': f'No hay un correo de reenvío disponible para el estado actual "{candidato.get_estado_display()}".'
+            }, status=400)
+
+        funcion_correo, etiqueta_etapa = mapa_estados[candidato.estado]
+
+        enviado = funcion_correo(candidato)
+
+        if not enviado:
+            return Response({
+                'error': 'No se pudo enviar el correo. Revisa los logs del servidor.'
+            }, status=500)
+
+        return Response({
+            'mensaje': f'Correo de "{etiqueta_etapa}" reenviado a {candidato.email}.',
+            'etapa':   etiqueta_etapa,
+        })
+
+
+    # ------------------------------------------
+    # BANCO DE TALENTO (S4-18)
+    # ------------------------------------------
+    @action(detail=True, methods=['post'], url_path='banco-talento')
+    def toggle_banco_talento(self, request, pk=None):
+        """Agrega o quita al candidato del banco de talento."""
+        candidato = self.get_object()
+        candidato.en_banco_talento = not candidato.en_banco_talento
+        candidato.save(update_fields=['en_banco_talento'])
+        return Response({
+            'en_banco_talento': candidato.en_banco_talento,
+            'mensaje': ('Agregado al banco de talento.' if candidato.en_banco_talento
+                        else 'Retirado del banco de talento.'),
+        })
+
+    @action(detail=False, methods=['get'], url_path='banco-talento')
+    def listar_banco_talento(self, request):
+        """
+        Lista el banco de talento con filtros por score:
+        ?score_min=70&habilidad=python&area_id=2
+        """
+        qs = Candidato.objects.filter(en_banco_talento=True).select_related('vacante', 'vacante__area')
+        score_min = request.query_params.get('score_min')
+        if score_min:
+            qs = qs.filter(score_cv__gte=int(score_min))
+        habilidad = request.query_params.get('habilidad')
+        if habilidad:
+            qs = qs.filter(habilidades_detectadas__icontains=habilidad)
+        area_id = request.query_params.get('area_id')
+        if area_id:
+            qs = qs.filter(vacante__area_id=area_id)
+        data = [{
+            'id': c.id, 'nombre_completo': c.nombre_completo, 'email': c.email,
+            'vacante_original': c.vacante.titulo if c.vacante else None,
+            'score_cv': c.score_cv, 'score_examen': float(c.score_examen) if c.score_examen else None,
+            'score_entrevista': float(c.score_entrevista) if c.score_entrevista else None,
+            'score_final': float(c.score_final) if c.score_final else None,
+            'habilidades': c.habilidades_detectadas, 'estado': c.estado,
+        } for c in qs.order_by('-score_final', '-score_cv')]
+        return Response({'total': len(data), 'candidatos': data})
+
+    # ------------------------------------------
+    # MOTIVO DE DESCARTE (S4-20)
+    # ------------------------------------------
+    @action(detail=True, methods=['post'], url_path='descartar')
+    def descartar(self, request, pk=None):
+        """Descarta al candidato registrando el motivo (obligatorio)."""
+        candidato = self.get_object()
+        motivo = (request.data.get('motivo') or '').strip()
+        if not motivo:
+            return Response({'error': 'El motivo de descarte es obligatorio.'}, status=400)
+        candidato.motivo_descarte = motivo
+        candidato.estado = 'descartado'
+        candidato.save(update_fields=['motivo_descarte', 'estado'])
+        return Response({'mensaje': f'Candidato descartado. Motivo registrado.', 'estado': 'descartado'})
 
     # ------------------------------------------
     # MARCAR FINALISTAS
@@ -382,3 +581,49 @@ def _enviar_correo_async(candidato):
         except Exception as e:
             logger.error(f'Error enviando correo: {e}')
     threading.Thread(target=_enviar, daemon=True).start()
+
+
+# ==========================================================
+# NOTIFICACIONES INTERNAS (campana del sistema para RRHH)
+# ==========================================================
+from rest_framework import serializers as _serializers
+from .models import Notificacion
+
+
+class NotificacionSerializer(_serializers.ModelSerializer):
+    candidato_nombre = _serializers.CharField(source='candidato.nombre_completo', read_only=True, default=None)
+    tipo_display     = _serializers.CharField(source='get_tipo_display', read_only=True)
+
+    class Meta:
+        model  = Notificacion
+        fields = ['id', 'tipo', 'tipo_display', 'titulo', 'mensaje',
+                  'candidato', 'candidato_nombre', 'leida', 'creada']
+
+
+class NotificacionViewSet(viewsets.ModelViewSet):
+    """Notificaciones para RRHH: listar, marcar como leídas."""
+    serializer_class = NotificacionSerializer
+    queryset = Notificacion.objects.select_related('candidato').all()
+
+    def get_permissions(self):
+        return [EsReclutadorOAdmin()]
+
+    @action(detail=False, methods=['get'], url_path='no-leidas')
+    def no_leidas(self, request):
+        qs = self.get_queryset().filter(leida=False)
+        return Response({
+            'total': qs.count(),
+            'notificaciones': NotificacionSerializer(qs[:20], many=True).data,
+        })
+
+    @action(detail=True, methods=['post'], url_path='marcar-leida')
+    def marcar_leida(self, request, pk=None):
+        notif = self.get_object()
+        notif.leida = True
+        notif.save(update_fields=['leida'])
+        return Response({'ok': True})
+
+    @action(detail=False, methods=['post'], url_path='marcar-todas-leidas')
+    def marcar_todas_leidas(self, request):
+        self.get_queryset().filter(leida=False).update(leida=True)
+        return Response({'ok': True})

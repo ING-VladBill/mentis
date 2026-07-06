@@ -10,6 +10,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from candidatos.models import TokenAcceso
+from django.core.mail import EmailMultiAlternatives
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +223,26 @@ def _info_box(titulo: str, items: list, color: str = COLOR_PRIMARY) -> str:
     </table>"""
 
 
+
+def _bloque_codigo(codigo: str) -> str:
+    """Caja destacada con el código de acceso corto para la app móvil."""
+    return f"""
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+      <tr>
+        <td style="background:linear-gradient(135deg,#EEF2FF,#F5F3FF); border:2px dashed {COLOR_PRIMARY}; border-radius:14px; padding:22px 20px; text-align:center;">
+          <p style="margin:0 0 8px; font-size:12px; font-weight:700; color:{COLOR_TEXT_MUTED}; letter-spacing:1.5px; text-transform:uppercase;">
+            ¿Ingresas desde la app móvil?
+          </p>
+          <p style="margin:0 0 6px; font-size:13px; color:{COLOR_TEXT_MUTED};">
+            Usa este código de acceso:
+          </p>
+          <p style="margin:0; font-size:30px; font-weight:800; color:{COLOR_PRIMARY_DARK}; letter-spacing:3px; font-family:'Courier New',monospace;">
+            {codigo}
+          </p>
+        </td>
+      </tr>
+    </table>"""
+
 def _link_alternativo(link: str) -> str:
     return f"""
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 0;">
@@ -316,6 +337,7 @@ def enviar_correo_avance_cv(candidato) -> bool:
 
     {_boton('Iniciar evaluación', link)}
     {_link_alternativo(link)}
+    {_bloque_codigo(token.codigo_corto)}
 
     <p style="margin:24px 0 0; color:{COLOR_TEXT_MUTED}; font-size:14px; line-height:1.6; text-align:center;">Estamos seguros de que harás un gran papel. ¡Mucho éxito! 💪</p>
     """
@@ -336,6 +358,7 @@ def enviar_correo_avance_cv(candidato) -> bool:
 
 def enviar_correo_avance_examen(candidato) -> bool:
     token = generar_token_acceso(candidato, tipo='entrevista')
+    duracion = min(getattr(candidato.vacante, 'duracion_minutos_entrevista', 30) or 30, 40)
     link  = token.get_url()
     horas = settings.MENTIS['TOKEN_ACCESO_EXPIRACION_HORAS']
     asunto = f'¡Superaste el examen! Siguiente etapa · {candidato.vacante.titulo}'
@@ -350,9 +373,9 @@ def enviar_correo_avance_examen(candidato) -> bool:
     </p>
 
     {_info_box('Detalles de la entrevista', [
-        '🎙️ &nbsp;Conversación por voz con la IA',
-        '💬 &nbsp;5 a 7 preguntas dinámicas adaptadas a ti',
-        '⏱️ &nbsp;Duración estimada: 20-30 minutos',
+        '🎙️ &nbsp;Una conversación por voz con E.V.A., nuestra entrevistadora IA',
+        '💬 &nbsp;Sin cuestionarios: es una charla natural sobre ti y tu experiencia',
+        f'⏱️ &nbsp;Duración máxima: {duracion} minutos',
         f'⏳ &nbsp;Link válido por {horas} horas',
     ], color=COLOR_ACCENT)}
 
@@ -466,37 +489,75 @@ def enviar_correo_confirmacion_postulacion(candidato) -> bool:
 def _enviar_correo(destinatario: str, nombre: str, asunto: str,
                    cuerpo_texto: str, cuerpo_html: str) -> bool:
     """
-    Envía un correo usando la API HTTP de Resend (no SMTP).
-    Railway bloquea los puertos SMTP (465/587) en planes Trial/Hobby,
-    así que usamos la API REST de Resend que va por HTTPS (puerto 443).
- 
-    Variables de entorno requeridas:
-        RESEND_API_KEY  → obtenida en resend.com/api-keys
-        RESEND_FROM     → "MENTIS Reclutamiento <onboarding@resend.dev>"
-                          (o tu dominio verificado en Resend)
+    Envía un correo por SMTP (Gmail) con versión HTML + texto plano.
+    Remitente: DEFAULT_FROM_EMAIL (MENTIS Reclutamiento <mentis.reclutamiento@gmail.com>).
+    Funciona en local (la red permite SMTP). En Railway gratis el SMTP está bloqueado.
     """
-    import resend
- 
-    api_key = settings.MENTIS.get('RESEND_API_KEY', '')
-    from_email = settings.MENTIS.get('RESEND_FROM', 'MENTIS <onboarding@resend.dev>')
- 
-    if not api_key:
-        logger.error('RESEND_API_KEY no configurada. Correo no enviado.')
-        return False
- 
-    resend.api_key = api_key
- 
     try:
-        params = {
-            "from":    from_email,
-            "to":      [destinatario],
-            "subject": asunto,
-            "html":    cuerpo_html,
-            "text":    cuerpo_texto,
-        }
-        r = resend.Emails.send(params)
-        logger.info(f'Correo Resend enviado a {destinatario}: {asunto} (id={r.get("id", "?")})')
+        msg = EmailMultiAlternatives(
+            subject    = asunto,
+            body       = cuerpo_texto,
+            from_email = settings.DEFAULT_FROM_EMAIL,
+            to         = [destinatario],
+        )
+        msg.attach_alternative(cuerpo_html, 'text/html')
+        msg.send()
+        logger.info(f'Correo enviado a {destinatario}: {asunto}')
         return True
     except Exception as e:
-        logger.error(f'Error Resend enviando correo a {destinatario}: {e}')
+        logger.error(f'Error enviando correo a {destinatario}: {e}')
         return False
+
+
+def enviar_correo_alerta_riesgo_rrhh(candidato, puntaje_riesgo: int) -> bool:
+    """
+    Alerta a todo el equipo de RRHH (admins + reclutadores) cuando un candidato
+    aprueba el examen pero con RIESGO ALTO de auditoría. La entrevista queda
+    retenida para revisión manual.
+    """
+    from django.contrib.auth import get_user_model
+    Usuario = get_user_model()
+
+    destinatarios = list(
+        Usuario.objects.filter(rol__in=['admin', 'reclutador'], is_active=True)
+        .exclude(email='').values_list('email', 'nombre')
+    )
+    if not destinatarios:
+        return False
+
+    frontend = settings.MENTIS['FRONTEND_URL']
+    link_ficha = f'{frontend}/candidatos/{candidato.id}'
+    asunto = f'⚠️ Revisar examen · {candidato.nombre_completo} (riesgo alto)'
+
+    contenido = f"""
+    <h1 class="h1" style="margin:0 0 12px; color:{COLOR_TEXT}; font-size:24px; font-weight:800; line-height:1.25;">Examen aprobado con riesgo alto ⚠️</h1>
+    <p style="margin:0 0 16px; color:{COLOR_TEXT_MUTED}; font-size:15px; line-height:1.7;">
+      <strong style="color:{COLOR_TEXT};">{candidato.nombre_completo}</strong> aprobó el examen técnico para el puesto de
+      <strong style="color:{COLOR_TEXT};">{candidato.vacante.titulo}</strong>, pero la auditoría antifraude detectó
+      múltiples conductas sospechosas (puntaje de riesgo <strong style="color:#DC2626;">{puntaje_riesgo}</strong>).
+    </p>
+    <p style="margin:0 0 8px; color:{COLOR_TEXT_MUTED}; font-size:15px; line-height:1.7;">
+      Por seguridad, <strong style="color:{COLOR_TEXT};">la entrevista con EVA NO se envió automáticamente</strong>.
+      Revisa el detalle del examen y, si consideras que el candidato debe continuar, reenvía la etapa
+      manualmente desde su ficha.
+    </p>
+
+    {_boton('Revisar ficha del candidato', link_ficha, color='#DC2626')}
+    {_link_alternativo(link_ficha)}
+    """
+
+    html = _layout(
+        preheader=f'{candidato.nombre_completo} aprobó con riesgo alto — requiere revisión',
+        header_gradient='linear-gradient(135deg,#DC2626,#B91C1C)',
+        badge_emoji='⚠️', badge_texto='REVISIÓN REQUERIDA',
+        contenido=contenido,
+    )
+    texto = (f'{candidato.nombre_completo} aprobó el examen de "{candidato.vacante.titulo}" con riesgo alto '
+             f'(puntaje {puntaje_riesgo}). La entrevista no se envió automáticamente. '
+             f'Revisa su ficha: {link_ficha}')
+
+    ok = True
+    for email, nombre in destinatarios:
+        enviado = _enviar_correo(email, nombre, asunto, texto, html)
+        ok = ok and enviado
+    return ok
