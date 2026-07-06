@@ -25,7 +25,7 @@ export default function Progreso() {
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#f8f9fb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif', gap: 14, flexDirection: 'column' }}>
       <div style={{ width: 32, height: 32, border: '2.5px solid rgba(124,58,237,0.2)', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <style>{pageCSS}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <div style={{ fontSize: 13.5, color: '#6b7280' }}>Cargando tu progreso...</div>
     </div>
   );
@@ -35,7 +35,7 @@ export default function Progreso() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fb', fontFamily: "'Inter', system-ui, sans-serif", paddingBottom: 48 }}>
-      <style>{pageCSS}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
       {/* Header */}
       <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '16px 28px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -49,7 +49,7 @@ export default function Progreso() {
 
         {/* Saludo */}
         {p && (
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 18, padding: '24px 28px', marginBottom: 20, animation: 'fadeSlideUp 260ms cubic-bezier(0.23,1,0.32,1) both' }}>
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 18, padding: '24px 28px', marginBottom: 20 }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Hola, {p.candidato} 👋</div>
             <div style={{ fontSize: 13.5, color: '#6b7280', marginBottom: 12 }}>
               Proceso: <strong style={{ color: '#374151' }}>{p.vacante}</strong>
@@ -63,83 +63,54 @@ export default function Progreso() {
         )}
 
         {/* Timeline */}
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 18, padding: '28px', marginBottom: 20, animation: 'fadeSlideUp 260ms cubic-bezier(0.23,1,0.32,1) 80ms both' }}>
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 18, padding: '28px', marginBottom: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 24 }}>Tu progreso en el proceso</div>
 
-          {/* Contenedor relativo para la línea de timeline */}
-          <div style={{ position: 'relative' }}>
-            {/* Línea de fondo */}
-            <div style={{ position: 'absolute', left: 19, top: 20, bottom: 20, width: 2, background: '#f3f4f6', zIndex: 0 }} />
-            {/* Línea de progreso animada — scaleY 0→1 desde arriba */}
-            <div style={{
-              position: 'absolute', left: 19, top: 20,
-              width: 2,
-              height: `${((p?.fases || []).filter(f => f.estado === 'completada').length / Math.max(1, (p?.fases || []).length - 1)) * 100}%`,
-              background: 'rgba(16,185,129,0.4)',
-              transformOrigin: 'top',
-              animation: 'timelineGrow 600ms cubic-bezier(0.23,1,0.32,1) 200ms both',
-              zIndex: 0,
-            }} />
+          {(p?.fases || []).map((fase, i, arr) => {
+            const cfg = FASE_CFG[fase.estado] || FASE_CFG.pendiente;
+            const esUltima = i === arr.length - 1;
+            return (
+              <div key={fase.titulo} style={{ display: 'flex', gap: 16, position: 'relative' }}>
+                {/* Línea vertical */}
+                {!esUltima && (
+                  <div style={{ position: 'absolute', left: 19, top: 40, bottom: 0, width: 2, background: fase.estado === 'completada' ? 'rgba(16,185,129,0.3)' : '#f3f4f6', zIndex: 0 }} />
+                )}
 
-            {(p?.fases || []).map((fase, i) => {
-              const cfg    = FASE_CFG[fase.estado] || FASE_CFG.pendiente;
-              const esUltima = i === (p?.fases || []).length - 1;
-              const delay  = 100 + i * 100;
+                {/* Ícono */}
+                <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: cfg.bg, border: `2px solid ${cfg.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, position: 'relative' }}>
+                  <i className={`ti ${cfg.icon}`} style={{ fontSize: 18, color: cfg.color }} />
+                </div>
 
-              return (
-                <div key={fase.titulo} style={{ display: 'flex', gap: 16, position: 'relative', animation: `slideInLeft 280ms cubic-bezier(0.23,1,0.32,1) ${delay}ms both` }}>
-                  {/* Ícono */}
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-                    background: cfg.bg, border: `2px solid ${cfg.border}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 1, position: 'relative',
-                    animation: fase.estado === 'completada' ? `iconPulse 300ms cubic-bezier(0.77,0,0.175,1) ${delay + 180}ms both` : 'none',
-                  }}>
-                    <i className={`ti ${cfg.icon}`} style={{ fontSize: 18, color: cfg.color }} />
-                  </div>
-
-                  {/* Contenido */}
-                  <div style={{ flex: 1, paddingBottom: esUltima ? 0 : 24 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: fase.estado === 'actual' ? 700 : 500, color: fase.estado === 'bloqueada' ? '#d1d5db' : '#111827' }}>
-                        {fase.titulo}
-                      </div>
-                      {fase.estado === 'actual' && (
-                        <span style={{ fontSize: 10.5, fontWeight: 700, color: '#7c3aed', background: 'rgba(124,58,237,0.1)', padding: '1px 8px', borderRadius: 5 }}>ACTUAL</span>
-                      )}
+                {/* Contenido */}
+                <div style={{ flex: 1, paddingBottom: esUltima ? 0 : 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: fase.estado === 'actual' ? 700 : 500, color: fase.estado === 'bloqueada' ? '#d1d5db' : '#111827' }}>
+                      {fase.titulo}
                     </div>
-                    {fase.descripcion && (
-                      <div style={{ fontSize: 13, color: fase.estado === 'bloqueada' ? '#d1d5db' : '#6b7280', lineHeight: 1.5 }}>{fase.descripcion}</div>
+                    {fase.estado === 'actual' && (
+                      <span style={{ fontSize: 10.5, fontWeight: 700, color: '#7c3aed', background: 'rgba(124,58,237,0.1)', padding: '1px 8px', borderRadius: 5 }}>ACTUAL</span>
                     )}
                   </div>
+                  {fase.descripcion && (
+                    <div style={{ fontSize: 13, color: fase.estado === 'bloqueada' ? '#d1d5db' : '#6b7280', lineHeight: 1.5 }}>{fase.descripcion}</div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Acción disponible */}
         {accion && accion.habilitada && (
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 18, padding: '24px 28px', animation: 'fadeSlideUp 260ms cubic-bezier(0.23,1,0.32,1) 400ms both' }}>
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 18, padding: '24px 28px' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Acción disponible</div>
             {accion.tipo === 'rendir_examen' && (
-              <button
-                onClick={() => navigate('/candidato/instrucciones')}
-                style={btnStyle}
-                onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.97)'; }}
-                onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-              >
+              <button onClick={() => navigate('/candidato/instrucciones')} style={{ width: '100%', padding: '13px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 14.5, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(124,58,237,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit' }}>
                 <i className="ti ti-clipboard-list" style={{ fontSize: 17 }} /> {accion.titulo || 'Rendir examen técnico'}
               </button>
             )}
             {accion.tipo === 'continuar_examen' && (
-              <button
-                onClick={() => navigate('/candidato/examen')}
-                style={{ ...btnStyle, background: 'linear-gradient(135deg,#f59e0b,#d97706)', boxShadow: '0 6px 20px rgba(245,158,11,0.25)' }}
-                onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.97)'; }}
-                onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-              >
+              <button onClick={() => navigate('/candidato/examen')} style={{ width: '100%', padding: '13px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontSize: 14.5, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(245,158,11,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit' }}>
                 <i className="ti ti-player-play" style={{ fontSize: 17 }} /> {accion.titulo || 'Continuar examen'}
               </button>
             )}
@@ -153,39 +124,3 @@ export default function Progreso() {
     </div>
   );
 }
-
-const btnStyle = {
-  width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
-  background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff',
-  fontSize: 14.5, fontWeight: 700, cursor: 'pointer',
-  boxShadow: '0 6px 20px rgba(124,58,237,0.25)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit',
-  transition: 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)',
-};
-
-const pageCSS = `
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-@keyframes timelineGrow {
-  from { transform: scaleY(0); }
-  to   { transform: scaleY(1); }
-}
-@keyframes iconPulse {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-`;

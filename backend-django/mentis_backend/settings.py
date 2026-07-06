@@ -182,9 +182,6 @@ CORS_ALLOW_HEADERS = [
 # EMAIL - Gmail SMTP
 # ------------------------------------------
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# Clave compartida para llamadas internas entre backends (Spring Boot -> Django)
-INTERNAL_SERVICE_KEY = os.getenv('INTERNAL_SERVICE_KEY', '')
-
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
@@ -229,6 +226,15 @@ MENTIS = {
     'NOTA_EXAMEN_MINIMA': 13,
     'TOP_CANDIDATOS_DEFAULT': 5,
     'FRONTEND_URL': os.getenv('FRONTEND_URL', 'http://localhost:5173'),
+
+    # ------------------------------------------
+    # Resend — API HTTP de correo (reemplaza SMTP)
+    # Obtén tu API key en https://resend.com/api-keys (plan gratis: 3000/mes)
+    # RESEND_FROM: "MENTIS <onboarding@resend.dev>" para pruebas
+    #              o "MENTIS <noreply@tudominio.com>" con dominio verificado
+    # ------------------------------------------
+    'RESEND_API_KEY': os.getenv('RESEND_API_KEY', ''),
+    'RESEND_FROM':    os.getenv('RESEND_FROM', 'MENTIS Reclutamiento <onboarding@resend.dev>'),
 }
 
 # ------------------------------------------

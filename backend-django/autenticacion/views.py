@@ -120,9 +120,8 @@ def crear_usuario_rrhh(request):
 
     serializer = RegistroUsuarioSerializer(data=request.data)
     if serializer.is_valid():
+        password_temporal = request.data.get('password')
         user = serializer.save()
-        # La contraseña la generó el sistema (no el admin); la tomamos del usuario
-        password_temporal = getattr(user, '_password_temporal_plano', '')
 
         # El correo de bienvenida se envía en segundo plano y NUNCA debe
         # tumbar la creación del usuario. Si el SMTP falla o tarda, el

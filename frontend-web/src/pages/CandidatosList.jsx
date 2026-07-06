@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useTheme } from '../ThemeContext';
+import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../App';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
@@ -67,8 +67,6 @@ const FILTROS = ['todos', 'postulado', 'cv_aprobado', 'cv_rechazado', 'examen_pe
 export default function CandidatosList() {
   const { t } = useTheme();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const vacanteId = searchParams.get('vacante_id');
 
   const [candidatos, setCandidatos] = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -76,20 +74,15 @@ export default function CandidatosList() {
   const [filtro, setFiltro]         = useState('todos');
   const [busqueda, setBusqueda]     = useState('');
   const [analizando, setAnalizando] = useState({});
-  const [vacanteNombre, setVacanteNombre] = useState('');
 
-  useEffect(() => { cargar(); }, [vacanteId]);
+  useEffect(() => { cargar(); }, []);
 
   async function cargar() {
     try {
       setLoading(true);
-      const query = vacanteId ? `?vacante_id=${vacanteId}` : '';
-      const { data } = await api.get(`/api/candidatos/${query}`);
-      const lista = data.results || data;
-      setCandidatos(lista);
-      if (vacanteId && lista.length > 0 && lista[0].vacante_titulo) {
-        setVacanteNombre(lista[0].vacante_titulo);
-      }
+      const { data } = await api.get('/api/candidatos/');
+      // Sprint 2 puede devolver paginado: { count, results: [...] }
+      setCandidatos(data.results || data);
     } catch {
       setError('No se pudo conectar. ¿Está el backend corriendo?');
     } finally {
@@ -165,19 +158,6 @@ export default function CandidatosList() {
   return (
     <div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
-
-      {/* Banner filtro por vacante */}
-      {vacanteId && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderRadius: 9, marginBottom: 16, background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', fontSize: 13, color: t.text }}>
-          <i className="ti ti-filter" style={{ color: '#a78bfa', fontSize: 15 }} />
-          Mostrando candidatos de: <strong style={{ color: '#a78bfa' }}>{vacanteNombre || `Vacante #${vacanteId}`}</strong>
-          <button onClick={() => navigate('/candidatos')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
-            onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-            onMouseLeave={e => e.currentTarget.style.color = t.textMuted}>
-            <i className="ti ti-x" style={{ fontSize: 13 }} /> Ver todos
-          </button>
-        </div>
-      )}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
@@ -261,7 +241,7 @@ export default function CandidatosList() {
               {lista.map((c, i) => {
                 const cls = CLASIFICACION_CFG[c.clasificacion_ia];
                 const estaAnalizando = analizando[c.id];
-                const puedeAnalizar = !['cv_analizando', 'contratado'].includes(c.estado);
+                const puedeAnalizar  = ['postulado', 'cv_rechazado'].includes(c.estado);
                 const nombreParts    = (c.nombre_completo || '').split(' ');
 
                 return (
@@ -309,8 +289,8 @@ export default function CandidatosList() {
                               transition: 'width 0.3s',
                             }} />
                           </div>
-                          <span style={{ fontSize: 12, fontWeight: 600, minWidth: 48, color: c.score_cv >= 70 ? '#34d399' : c.score_cv >= 40 ? '#fbbf24' : '#f87171' }}>
-                            {c.score_cv}/100
+                          <span style={{ fontSize: 12, fontWeight: 600, minWidth: 30, color: c.score_cv >= 70 ? '#34d399' : c.score_cv >= 40 ? '#fbbf24' : '#f87171' }}>
+                            {c.score_cv}%
                           </span>
                         </div>
                       ) : (
@@ -370,13 +350,6 @@ export default function CandidatosList() {
                             onMouseEnter={e => { e.currentTarget.style.color = '#38bdf8'; e.currentTarget.style.borderColor = 'rgba(56,189,248,0.3)'; }}
                             onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}>
                             <i className="ti ti-brand-linkedin" />
-                          </a>
-                        )}
-                        {c.github && (
-                          <a href={c.github} target="_blank" rel="noreferrer" title="GitHub" style={{ width: 28, height: 28, borderRadius: 7, background: t.toggleBg, border: `1px solid ${t.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted, textDecoration: 'none', transition: 'all 0.15s', fontSize: 14 }}
-                            onMouseEnter={e => { e.currentTarget.style.color = t.text; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.borderColor = t.cardBorder; }}>
-                            <i className="ti ti-brand-github" />
                           </a>
                         )}
                       </div>

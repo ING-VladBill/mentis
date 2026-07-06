@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
-import { useTheme } from '../ThemeContext';
+import { useTheme } from '../App';
 import api from '../services/api';
 
 // ─── Ícono PDF ────────────────────────────────────────────────────────────────

@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 // ─── URLs base ────────────────────────────────────────────────────────────────
-const DJANGO_URL = 'http://localhost:8000';
-const SPRING_URL = 'http://localhost:8080';
+const DJANGO_URL = 'https://mentis-production-6ed9.up.railway.app';
+const SPRING_URL = 'https://springboot-production-ad3c.up.railway.app';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  INSTANCIA DJANGO — admin RRHH

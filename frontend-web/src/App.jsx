@@ -2,7 +2,7 @@ import {
   BrowserRouter, Routes, Route, NavLink,
   useLocation, useNavigate, Navigate,
 } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { Toaster } from 'react-hot-toast';
 
 import VacantesList   from './pages/VacantesList';
@@ -15,25 +15,22 @@ import Login          from './pages/Login';
 import Usuarios       from './pages/Usuarios';
 import Areas          from './pages/Areas';
 import Ranking        from './pages/Ranking';
-import BancoTalento         from './pages/BancoTalento';
 import CargaMasiva    from './pages/CargaMasiva';
 import Postular       from './pages/Postular';
 import Evaluaciones   from './pages/Evaluaciones';
 import ExamenDetalle  from './pages/ExamenDetalle';
-import Auditoria      from './pages/Auditoria';
-// ─── Portal candidato — descomenta cuando copies la carpeta src/pages/candidato/ ──
 import AccesoCandidato      from './pages/candidato/Acceso';
 import ExamenInstrucciones  from './pages/candidato/ExamenInstrucciones';
 import Examen               from './pages/candidato/Examen';
 import ExamenFinalizado     from './pages/candidato/ExamenFinalizado';
 import Progreso             from './pages/candidato/Progreso';
 import SesionExpirada       from './pages/candidato/SesionExpirada';
-import RedireccionadorCandidato from './pages/RedireccionadorCandidato';
 import ProtectedRoute from './components/ProtectedRoute';
 import api            from './services/api';
 
 // ─── Theme Context ────────────────────────────────────────────────────────────
-import { ThemeContext, useTheme } from './ThemeContext';
+export const ThemeContext = createContext();
+export function useTheme() { return useContext(ThemeContext); }
 
 function tokens(dark) {
   return dark ? {
@@ -91,17 +88,21 @@ function Sidebar() {
     : nombre.slice(0, 2).toUpperCase();
 
   const NAV_MAIN = [
-    { to: '/vacantes',     icon: 'ti-briefcase',      label: 'Vacantes'     },
-    { to: '/candidatos',   icon: 'ti-users',          label: 'Candidatos'   },
+    { to: '/vacantes',     icon: 'ti-briefcase',    label: 'Vacantes'     },
+    { to: '/candidatos',   icon: 'ti-users',        label: 'Candidatos'   },
     { to: '/evaluaciones', icon: 'ti-clipboard-list', label: 'Evaluaciones' },
-    { to: '/auditoria',    icon: 'ti-shield-check',   label: 'Auditoría'    },
-    { to: '/ranking',      icon: 'ti-trophy',         label: 'Ranking'      },
-    { to: '/banco-talento', icon: 'ti-star',          label: 'Banco de talento' },
-    { to: '/carga-masiva', icon: 'ti-files',          label: 'Carga masiva' },
-    { to: '/areas',        icon: 'ti-layout-grid',    label: 'Áreas'        },
-    { to: '/usuarios',     icon: 'ti-users-group',    label: 'Usuarios'     },
+    { to: '/ranking',      icon: 'ti-trophy',       label: 'Ranking'      },
+    { to: '/carga-masiva', icon: 'ti-files',        label: 'Carga masiva' },
+    { to: '/areas',        icon: 'ti-layout-grid',  label: 'Áreas'        },
+    { to: '/usuarios',     icon: 'ti-users-group',  label: 'Usuarios'     },
   ];
 
+  const NAV_SOON = [
+    { icon: 'ti-robot',        label: 'Entrevistas IA' },
+    { icon: 'ti-chart-bar',    label: 'Resultados'     },
+    { icon: 'ti-shield-check', label: 'Auditoría'      },
+    { icon: 'ti-settings',     label: 'Configuración'  },
+  ];
 
   async function handleLogout() {
     try {
@@ -145,7 +146,7 @@ function Sidebar() {
 
       {/* Nav */}
       <nav style={{ padding: '14px 10px', flex: 1, overflowY: 'auto' }}>
-        <div style={{ fontSize: 10, color: t.textFaint, letterSpacing: '0.14em', padding: '6px 10px 8px', fontWeight: 600 }}>SPRINT 3</div>
+        <div style={{ fontSize: 10, color: t.textFaint, letterSpacing: '0.14em', padding: '6px 10px 8px', fontWeight: 600 }}>SPRINT 2</div>
         {NAV_MAIN.map(({ to, icon, label }) => (
           <NavLink key={to} to={to} style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: 10,
@@ -169,8 +170,31 @@ function Sidebar() {
           </NavLink>
         ))}
 
+        <div style={{ fontSize: 10, color: t.textFaint, letterSpacing: '0.14em', padding: '18px 10px 8px', fontWeight: 600 }}>PRÓXIMOS SPRINTS</div>
+        {NAV_SOON.map(({ icon, label }) => (
+          <div key={label} style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '8px 12px', borderRadius: 8, marginBottom: 2,
+            fontSize: 13.5, color: t.textFaint, cursor: 'not-allowed',
+          }}>
+            <i className={`ti ${icon}`} style={{ fontSize: 17 }} />
+            {label}
+            <span style={{ marginLeft: 'auto', fontSize: 10, background: t.toggleBg, color: t.textFaint, padding: '2px 7px', borderRadius: 5 }}>Pronto</span>
+          </div>
+        ))}
       </nav>
 
+      {/* Sprint badge */}
+      <div style={{
+        padding: '10px 14px', margin: '0 10px 10px', borderRadius: 10,
+        background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.18)',
+      }}>
+        <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, marginBottom: 2 }}>Sprint 2 — En progreso</div>
+        <div style={{ fontSize: 10.5, color: t.textFaint }}>Autenticación + IA</div>
+        <div style={{ marginTop: 8, background: t.toggleBg, borderRadius: 4, height: 4 }}>
+          <div style={{ width: '20%', height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,#7c3aed,#6d28d9)' }} />
+        </div>
+      </div>
 
       {/* Dark mode toggle */}
       <div style={{ padding: '10px 14px', borderTop: `1px solid ${t.sidebarBorder}` }}>
@@ -248,6 +272,28 @@ function Topbar({ title, subtitle }) {
         <div style={{ fontSize: 15.5, fontWeight: 600, color: t.text }}>{title}</div>
         {subtitle && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>{subtitle}</div>}
       </div>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        background: t.toggleBg, border: `1px solid ${t.cardBorder}`,
+        borderRadius: 8, padding: '7px 13px',
+        fontSize: 13, color: t.textFaint, minWidth: 210,
+      }}>
+        <i className="ti ti-search" style={{ fontSize: 14 }} />
+        <span>Buscar vacantes, candidatos...</span>
+      </div>
+      <div style={{
+        width: 34, height: 34, borderRadius: 8,
+        background: t.toggleBg, border: `1px solid ${t.cardBorder}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: t.textMuted, position: 'relative',
+      }}>
+        <i className="ti ti-bell" style={{ fontSize: 16 }} />
+        <div style={{
+          position: 'absolute', top: 7, right: 7,
+          width: 6, height: 6, borderRadius: '50%',
+          background: '#7c3aed', border: `1.5px solid ${t.topbar}`,
+        }} />
+      </div>
     </header>
   );
 }
@@ -259,8 +305,6 @@ const PAGE_META = {
   '/candidatos':           { title: 'Candidatos',          subtitle: 'Listado de todos los postulantes' },
   '/candidatos/registrar': { title: 'Registrar candidato', subtitle: 'Agregar nuevo postulante' },
   '/evaluaciones':         { title: 'Evaluaciones',        subtitle: 'Exámenes técnicos de candidatos' },
-  '/auditoria':            { title: 'Auditoría',           subtitle: 'Integridad de exámenes y eventos de proctoring' },
-  '/banco-talento':        { title: 'Banco de talento',    subtitle: 'Candidatos destacados guardados para futuras vacantes' },
   '/carga-masiva':         { title: 'Carga masiva',        subtitle: 'Sube múltiples CVs en un solo lote' },
   '/areas':                { title: 'Áreas',               subtitle: 'Gestión de áreas y etiquetas' },
   '/usuarios':             { title: 'Usuarios',            subtitle: 'Equipo de recursos humanos' },
@@ -303,10 +347,8 @@ function Layout() {
             <Route path="/candidatos/registrar"  element={<ProtectedRoute><CandidatoForm /></ProtectedRoute>} />
             <Route path="/candidatos/:id"        element={<ProtectedRoute><CandidatoDetalle /></ProtectedRoute>} />
             <Route path="/ranking"               element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
-            <Route path="/banco-talento"         element={<ProtectedRoute><BancoTalento /></ProtectedRoute>} />
             <Route path="/evaluaciones"          element={<ProtectedRoute><Evaluaciones /></ProtectedRoute>} />
             <Route path="/evaluaciones/:id"      element={<ProtectedRoute><ExamenDetalle /></ProtectedRoute>} />
-            <Route path="/auditoria"             element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
             <Route path="/carga-masiva"          element={<ProtectedRoute><CargaMasiva /></ProtectedRoute>} />
             <Route path="/areas"                 element={<ProtectedRoute><Areas /></ProtectedRoute>} />
             <Route path="/usuarios"              element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
@@ -317,16 +359,16 @@ function Layout() {
   );
 }
 
-// ─── Portal del candidato — descomenta cuando copies src/pages/candidato/ ────
+// ─── Portal del candidato (rutas /candidato/*) ────────────────────────────────
 function PortalCandidato() {
   return (
     <Routes>
-      <Route path="acceso"        element={<AccesoCandidato />} />
+      <Route path="acceso"       element={<AccesoCandidato />} />
       <Route path="instrucciones" element={<ExamenInstrucciones />} />
-      <Route path="examen"        element={<Examen />} />
-      <Route path="finalizado"    element={<ExamenFinalizado />} />
-      <Route path="progreso"      element={<Progreso />} />
-      <Route path="expirado"      element={<SesionExpirada />} />
+      <Route path="examen"       element={<Examen />} />
+      <Route path="finalizado"   element={<ExamenFinalizado />} />
+      <Route path="progreso"     element={<Progreso />} />
+      <Route path="expirado"     element={<SesionExpirada />} />
     </Routes>
   );
 }
@@ -398,9 +440,8 @@ export default function App() {
           {/* Pública */}
           <Route path="/login"                   element={<Login />} />
           <Route path="/postular/:codigo"        element={<Postular />} />
-          <Route path="/evaluacion/:tipo"        element={<RedireccionadorCandidato />} />
-          {/* Portal candidato — descomenta cuando copies src/pages/candidato/ */}
-          <Route path="/candidato/*" element={<PortalCandidato />} />
+          {/* Portal candidato — Spring Boot, sin login de RRHH */}
+          <Route path="/candidato/*"             element={<PortalCandidato />} />
           {/* Todo lo demás pasa por Layout */}
           <Route path="/*" element={<Layout />} />
         </Routes>

@@ -20,9 +20,6 @@ public class TokenAcceso {
     @Column(name = "token", length = 32, unique = true)
     private String token;
 
-    @Column(name = "codigo_corto", length = 20, unique = true)
-    private String codigoCorto;
-
     private String tipo;
     private Boolean usado;
 
@@ -41,12 +38,4 @@ public class TokenAcceso {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "candidato_id")
     private Candidato candidato;
-    public String getCodigoCorto() {
-        return codigoCorto;
-    }
-
-    public void setCodigoCorto(String codigoCorto) {
-        this.codigoCorto = codigoCorto;
-    }
-
 }

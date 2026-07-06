@@ -26,15 +26,22 @@ genai.configure(api_key=settings.GEMINI_API_KEY)
 def extraer_texto_pdf(archivo) -> str:
     """
     Extrae el texto de un PDF.
-    Intenta primero con pdfminer (reconstruye mejor el espaciado real del texto;
-    PyPDF2 suele insertar espacios falsos entre letras en PDFs generados desde
-    Canva/Word/plantillas de diseño, por ejemplo "JULON" -> "JUL ON"). Si pdfminer
-    falla o no extrae suficiente texto (ej: PDF escaneado como imagen), usa PyPDF2
-    como respaldo.
+    Intenta primero con PyPDF2 (rápido) y si falla usa pdfminer (más robusto).
     """
     texto = ''
 
-    # Intento 1: pdfminer (más preciso con el espaciado real del texto)
+    # Intento 1: PyPDF2
+    try:
+        archivo.seek(0)
+        reader = PyPDF2.PdfReader(archivo)
+        for page in reader.pages:
+            texto += page.extract_text() or ''
+        if len(texto.strip()) > 100:
+            return _limpiar_texto(texto)
+    except Exception as e:
+        logger.warning(f'PyPDF2 falló: {e}. Intentando con pdfminer...')
+
+    # Intento 2: pdfminer (mejor con PDFs escaneados/complejos)
     try:
         archivo.seek(0)
         contenido = archivo.read()
@@ -42,19 +49,7 @@ def extraer_texto_pdf(archivo) -> str:
         if len(texto.strip()) > 100:
             return _limpiar_texto(texto)
     except Exception as e:
-        logger.warning(f'pdfminer falló: {e}. Intentando con PyPDF2...')
-
-    # Intento 2: PyPDF2 (respaldo, útil con algunos PDFs que pdfminer no soporta)
-    try:
-        archivo.seek(0)
-        reader = PyPDF2.PdfReader(archivo)
-        texto_pypdf2 = ''
-        for page in reader.pages:
-            texto_pypdf2 += page.extract_text() or ''
-        if len(texto_pypdf2.strip()) > 100:
-            return _limpiar_texto(texto_pypdf2)
-    except Exception as e:
-        logger.error(f'PyPDF2 también falló: {e}')
+        logger.error(f'pdfminer también falló: {e}')
 
     return texto
 
@@ -175,8 +170,6 @@ Score total 0-100 distribuido así:
   "email_detectado": <email válido o null>,
   "telefono_detectado": <string o null>,
   "linkedin_detectado": <url o null>,
-  "github_detectado": <url o null>,
-  "portfolio_detectado": <url o null>,
   "habilidades_detectadas": [<lista de habilidades encontradas en el CV>],
   "habilidades_requeridas_presentes": [<habilidades del listado de requisitos que SÍ tiene>],
   "habilidades_faltantes": [<habilidades requeridas que NO tiene>],
@@ -221,38 +214,10 @@ def _procesar_resultado_analisis(resultado: dict, candidato, vacante) -> dict:
         candidato.telefono = resultado['telefono_detectado']
     if resultado.get('linkedin_detectado') and not candidato.linkedin:
         candidato.linkedin = resultado['linkedin_detectado']
-    if resultado.get('github_detectado') and not candidato.github:
-        candidato.github = resultado['github_detectado']
-    if resultado.get('portfolio_detectado') and not candidato.portfolio:
-        candidato.portfolio = resultado['portfolio_detectado']
     if resultado.get('anios_experiencia_detectados') and not candidato.anios_experiencia:
         candidato.anios_experiencia = resultado['anios_experiencia_detectados']
     if resultado.get('carrera_detectada') and not candidato.carrera:
         candidato.carrera = resultado['carrera_detectada']
-
-    # Corregir nombre/apellidos si la IA detectó el nombre real y el candidato
-    # quedó con el placeholder de carga masiva ("Nombre"/"Apellido") o vacío.
-    # NO se sobreescribe si el candidato ya tiene un nombre real (ej: lo escribió
-    # la propia persona en el formulario público) — mismo criterio que los demás
-    # campos de esta función.
-    PLACEHOLDER_NOMBRE   = {'nombre', ''}
-    PLACEHOLDER_APELLIDO = {'apellido', ''}
-    nombre_detectado = resultado.get('nombre_detectado')
-    necesita_nombre  = (candidato.nombre or '').strip().lower() in PLACEHOLDER_NOMBRE
-    necesita_apellido = (candidato.apellido_paterno or '').strip().lower() in PLACEHOLDER_APELLIDO
-    if nombre_detectado and (necesita_nombre or necesita_apellido):
-        partes = nombre_detectado.strip().split()
-        if len(partes) == 1:
-            candidato.nombre = partes[0]
-        elif len(partes) == 2:
-            candidato.nombre, candidato.apellido_paterno = partes[0], partes[1]
-        elif len(partes) == 3:
-            candidato.nombre, candidato.apellido_paterno, candidato.apellido_materno = partes
-        elif len(partes) >= 4:
-            # Convención peruana: los últimos 2 tokens son los apellidos (paterno, materno)
-            candidato.apellido_materno = partes[-1]
-            candidato.apellido_paterno = partes[-2]
-            candidato.nombre           = ' '.join(partes[:-2])
 
     # Cambiar estado según resultado
     if pasa_filtro:
@@ -278,30 +243,12 @@ def procesar_cv_individual(archivo_pdf, vacante_id: int, usuario_rrhh) -> dict:
     """
     Procesa un único PDF: extrae texto, extrae datos básicos con regex, crea candidato.
     Usado en la carga masiva.
-    Blindado: cualquier excepción inesperada en ESTE archivo se captura y se
-    reporta como fallo de ESTE archivo, sin tumbar el resto de la carga masiva.
     """
     from candidatos.models import Candidato
     from vacantes.models import Vacante
 
-    try:
-        vacante = Vacante.objects.get(id=vacante_id)
-    except Vacante.DoesNotExist:
-        return {
-            'exito': False,
-            'error': 'La vacante indicada no existe.',
-            'archivo': archivo_pdf.name,
-        }
-
-    try:
-        texto = extraer_texto_pdf(archivo_pdf)
-    except Exception as e:
-        logger.error(f'Error extrayendo texto de {archivo_pdf.name}: {e}')
-        return {
-            'exito': False,
-            'error': 'No se pudo leer el PDF (archivo dañado o formato no soportado).',
-            'archivo': archivo_pdf.name,
-        }
+    vacante = Vacante.objects.get(id=vacante_id)
+    texto   = extraer_texto_pdf(archivo_pdf)
 
     if not texto or len(texto.strip()) < 50:
         return {
@@ -310,17 +257,19 @@ def procesar_cv_individual(archivo_pdf, vacante_id: int, usuario_rrhh) -> dict:
             'archivo': archivo_pdf.name,
         }
 
-    # Extracción rápida de datos básicos antes del análisis completo.
-    # Si el email no se detecta aquí (regex superficial), NO bloqueamos la
-    # creación: el candidato se crea igual con el email en blanco, y el
-    # análisis con IA (más profundo) lo completará después, igual que hace
-    # con teléfono, LinkedIn, GitHub, etc.
+    # Extracción rápida de datos básicos antes del análisis completo
     datos_basicos = _extraer_datos_basicos(texto)
-    email = datos_basicos.get('email') or ''
+    email = datos_basicos.get('email')
 
-    # Evitar duplicados solo si SÍ se detectó un email real (si está vacío,
-    # no tiene sentido comparar contra otros candidatos sin email).
-    if email and Candidato.objects.filter(email=email, vacante=vacante).exists():
+    if not email:
+        return {
+            'exito': False,
+            'error': 'No se detectó email en el CV. Agrega el candidato manualmente.',
+            'archivo': archivo_pdf.name,
+        }
+
+    # Evitar duplicados (mismo email + misma vacante)
+    if Candidato.objects.filter(email=email, vacante=vacante).exists():
         return {
             'exito': False,
             'error': f'Ya existe un candidato con email {email} para esta vacante.',
@@ -328,25 +277,17 @@ def procesar_cv_individual(archivo_pdf, vacante_id: int, usuario_rrhh) -> dict:
         }
 
     # Crear candidato
-    try:
-        candidato = Candidato.objects.create(
-            vacante           = vacante,
-            nombre            = datos_basicos.get('nombre', 'Nombre') or 'Nombre',
-            apellido_paterno  = datos_basicos.get('apellidos', 'Apellido') or 'Apellido',
-            email             = email,
-            telefono          = datos_basicos.get('telefono') or '',
-            cv                = archivo_pdf,
-            cv_texto_extraido = texto,
-            estado            = 'cv_analizando',
-            registrado_por    = usuario_rrhh,
-        )
-    except Exception as e:
-        logger.error(f'Error creando candidato desde {archivo_pdf.name}: {e}')
-        return {
-            'exito': False,
-            'error': 'No se pudo crear el candidato (dato inválido en el CV).',
-            'archivo': archivo_pdf.name,
-        }
+    candidato = Candidato.objects.create(
+        vacante           = vacante,
+        nombre            = datos_basicos.get('nombre', 'Nombre') or 'Nombre',
+        apellido_paterno  = datos_basicos.get('apellidos', 'Apellido') or 'Apellido',
+        email             = email,
+        telefono          = datos_basicos.get('telefono', ''),
+        cv                = archivo_pdf,
+        cv_texto_extraido = texto,
+        estado            = 'cv_analizando',
+        registrado_por    = usuario_rrhh,
+    )
 
     # Lanzar análisis con IA en segundo plano (no bloquea la carga masiva).
     # Igual que el formulario público y el buzón IMAP.
@@ -391,15 +332,12 @@ def _extraer_datos_basicos(texto: str) -> dict:
     if email_match:
         datos['email'] = email_match.group(0)
 
-    # Teléfono (formato peruano y general). Reconoce el número sin importar si
-    # viene con espacios, guiones o todo junto (ej: "942 110 767", "942-110-767",
-    # "942110767", con o sin +51). Se normaliza quitando espacios/guiones antes
-    # de guardarlo.
+    # Teléfono (formato peruano y general)
     tel_match = re.search(
-        r'(\+?51[\s\-]?)?(9(?:[\s\-]*\d){8}|\d{2}[\s\-]?\d{3}[\s\-]?\d{4})',
+        r'(\+51[\s\-]?)?(9\d{8}|\d{2}[\s\-]\d{3}[\s\-]\d{4})',
         texto
     )
     if tel_match:
-        datos['telefono'] = re.sub(r'[\s\-]', '', tel_match.group(0))
+        datos['telefono'] = tel_match.group(0).strip()
 
     return datos

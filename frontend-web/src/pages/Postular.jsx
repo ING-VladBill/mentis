@@ -148,7 +148,6 @@ export default function Postular() {
   const [formError, setFormError] = useState(null);
   const [aceptaModalidad, setAceptaModalidad] = useState(false);
   const [aceptaCiudad, setAceptaCiudad]       = useState(false);
-  const [aceptaTerminos, setAceptaTerminos]   = useState(false);
 
   // ── Carga de la oferta ──
   useEffect(() => {
@@ -203,7 +202,6 @@ export default function Postular() {
     setFormError(null);
 
     if (!cvFile) { setFormError('Adjunta tu CV en PDF para continuar.'); return; }
-    if (!aceptaTerminos) { setFormError('Debes aceptar el tratamiento de datos personales para continuar.'); return; }
     if (data?.modalidad && !aceptaModalidad) { setFormError('Debes confirmar que aceptas la modalidad de trabajo.'); return; }
     if (data?.ciudad && !aceptaCiudad) { setFormError('Debes confirmar tu disponibilidad para la ubicación del puesto.'); return; }
 
@@ -397,7 +395,7 @@ export default function Postular() {
               </Field>
             </div>
 
-            <Field label="LinkedIn" hint="Opcional — si no lo completas, intentaremos detectarlo de tu CV automáticamente">
+            <Field label="LinkedIn" hint="Opcional — URL completa de tu perfil">
               <input name="linkedin" type="url" value={form.linkedin} onChange={handleChange} style={inp} placeholder="https://linkedin.com/in/..." />
             </Field>
 
@@ -451,31 +449,6 @@ export default function Postular() {
                   Confirmo disponibilidad para trabajar en <strong>{v.ciudad}</strong>.
                 </label>
               )}
-            </div>
-
-            {/* Términos y condiciones */}
-            <div style={{
-              background: '#f9fafb', border: '1px solid #e5e7eb',
-              borderRadius: 12, padding: '16px 18px',
-            }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 12 }}>
-                <i className="ti ti-shield-check" style={{ fontSize: 16, color: '#7c3aed', flexShrink: 0, marginTop: 1 }} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Tratamiento de datos personales e IA</div>
-                  <div style={{ fontSize: 12.5, color: '#6b7280', lineHeight: 1.6 }}>
-                    Tu CV y datos personales serán procesados por sistemas de inteligencia artificial para evaluar tu perfil y generar un análisis automático de tus habilidades, experiencia y compatibilidad con el puesto. Esta información será utilizada únicamente por el equipo de RRHH durante el proceso de selección y no será compartida con terceros. Tienes derecho a solicitar la eliminación de tus datos en cualquier momento escribiéndonos al correo de contacto.
-                  </div>
-                </div>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13.5, color: '#374151', lineHeight: 1.5 }}>
-                <input
-                  type="checkbox"
-                  checked={aceptaTerminos}
-                  onChange={e => setAceptaTerminos(e.target.checked)}
-                  style={{ width: 16, height: 16, marginTop: 2, accentColor: '#7c3aed', cursor: 'pointer', flexShrink: 0 }}
-                />
-                Acepto el tratamiento de mis datos personales por sistemas de inteligencia artificial para fines de selección de personal. <strong style={{ color: '#dc2626' }}>*</strong>
-              </label>
             </div>
 
             <button type="submit" disabled={enviando} style={{

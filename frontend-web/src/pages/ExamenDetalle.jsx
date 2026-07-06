@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useTheme } from '../ThemeContext';
+import { useTheme } from '../App';
 import api from '../services/api';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────

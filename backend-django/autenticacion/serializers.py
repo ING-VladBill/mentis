@@ -50,31 +50,26 @@ class UsuarioSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
-def generar_password_temporal(longitud=12):
-    """Genera una contraseña temporal segura y legible para el usuario RRHH."""
-    import secrets
-    alfabeto = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789'
-    return ''.join(secrets.choice(alfabeto) for _ in range(longitud))
-
-
 class RegistroUsuarioSerializer(serializers.ModelSerializer):
-    # password ya NO se pide al cliente; el sistema la genera automáticamente.
-    # Se expone como read_only para devolverla una sola vez en la respuesta.
-    password_generada = serializers.CharField(read_only=True)
+    password  = serializers.CharField(write_only=True, min_length=8)
+    password2 = serializers.CharField(write_only=True)
 
     class Meta:
         model = Usuario
         fields = ['email', 'nombre', 'apellidos', 'rol',
-                  'area_responsable', 'telefono', 'password_generada']
+                  'area_responsable', 'telefono', 'password', 'password2']
+
+    def validate(self, data):
+        if data['password'] != data['password2']:
+            raise serializers.ValidationError({'password2': 'Las contraseñas no coinciden.'})
+        return data
 
     def create(self, validated_data):
-        # El sistema genera la contraseña temporal (el admin ya no la inventa)
-        password = generar_password_temporal()
+        validated_data.pop('password2')
+        password = validated_data.pop('password')
         user = Usuario(**validated_data)
         user.set_password(password)
         user.save()
-        # Guardamos la password en claro SOLO en memoria para enviarla por correo
-        user._password_temporal_plano = password
         return user
 
 

@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { useTheme } from '../ThemeContext';
+import { useTheme } from '../App';
 import api from '../services/api';
-import EntrevistaPanel from './EntrevistaPanel';
-import AccionesTalento from './AccionesTalento';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const ESTADO_CFG = {
@@ -33,14 +31,6 @@ const CLASIFICACION_CFG = {
 };
 
 const GENERO_MAP  = { M: 'Masculino', F: 'Femenino', NB: 'No binario', NI: 'Prefiero no indicar' };
-const ESTADOS_SIN_REENVIO = [
-  'postulado', 'cv_analizando', 'cv_rechazado',
-  'examen_rechazado', 'descartado', 'contratado',
-];
-function puedeReenviarCorreo(estado) {
-  return !ESTADOS_SIN_REENVIO.includes(estado);
-}
-
 const SOURCE_MAP  = {
   manual: 'Registro manual', carga_masiva: 'Carga masiva',
   formulario: 'Formulario público', buzon_imap: 'Buzón de correo',
@@ -125,16 +115,15 @@ function EstadoBadge({ estado }) {
   );
 }
 
-function ScoreBar({ value, max = 100, trackBg }) {
+function ScoreBar({ value, trackBg }) {
   if (value == null) return null;
-  const color = scoreColor(value, max);
-  const pct = max === 100 ? value : (value / max) * 100;
+  const color = scoreColor(value);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <div style={{ flex: 1, height: 7, borderRadius: 4, background: trackBg || 'rgba(128,128,128,0.12)' }}>
-        <div style={{ width: `${Math.min(100, pct)}%`, height: '100%', borderRadius: 4, background: color, transition: 'width 0.5s' }} />
+        <div style={{ width: `${Math.min(100, value)}%`, height: '100%', borderRadius: 4, background: color, transition: 'width 0.5s' }} />
       </div>
-      <span style={{ fontSize: 13.5, fontWeight: 700, color, minWidth: 52 }}>{value}/{max}</span>
+      <span style={{ fontSize: 13.5, fontWeight: 700, color, minWidth: 40 }}>{value}%</span>
     </div>
   );
 }
@@ -393,7 +382,6 @@ export default function CandidatoDetalle() {
   const [candidato,  setCandidato]  = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [analizando, setAnalizando] = useState(false);
-  const [reenviando, setReenviando] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -402,16 +390,6 @@ export default function CandidatoDetalle() {
       .catch(() => toast.error('No se pudo cargar el candidato'))
       .finally(() => setLoading(false));
   }, [id]);
-
-  async function reenviarCorreoEtapa() {
-    setReenviando(true);
-    try {
-      const { data } = await api.post(`/api/candidatos/${id}/reenviar-correo-etapa/`);
-      toast.success(data.mensaje);
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Error al reenviar el correo.');
-    } finally { setReenviando(false); }
-  }
 
   async function analizarCV() {
     setAnalizando(true);
@@ -491,12 +469,6 @@ export default function CandidatoDetalle() {
               <button onClick={analizarCV} disabled={analizando} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', background: analizando ? 'rgba(124,58,237,0.3)' : 'rgba(124,58,237,0.15)', color: '#a78bfa', fontSize: 13, fontWeight: 500, cursor: analizando ? 'wait' : 'pointer' }}>
                 {analizando ? <span style={{ width: 13, height: 13, border: '2px solid rgba(167,139,250,0.3)', borderTopColor: '#a78bfa', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> : <i className="ti ti-robot" style={{ fontSize: 15 }} />}
                 {analizando ? 'Analizando...' : 'Analizar CV con IA'}
-              </button>
-            )}
-            {puedeReenviarCorreo(c.estado) && (
-              <button onClick={reenviarCorreoEtapa} disabled={reenviando} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', background: reenviando ? 'rgba(96,165,250,0.2)' : 'rgba(96,165,250,0.12)', color: '#60a5fa', fontSize: 13, fontWeight: 500, cursor: reenviando ? 'wait' : 'pointer' }}>
-                {reenviando ? <span style={{ width: 13, height: 13, border: '2px solid rgba(96,165,250,0.3)', borderTopColor: '#60a5fa', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> : <i className="ti ti-mail-forward" style={{ fontSize: 15 }} />}
-                {reenviando ? 'Enviando...' : 'Reenviar correo de etapa'}
               </button>
             )}
           </div>
@@ -726,12 +698,6 @@ export default function CandidatoDetalle() {
           <NotasCard candidatoId={id} t={t} />
         </div>
       </div>
-
-      {/* Acciones de talento: banco + descarte (Sprint 4) */}
-      <AccionesTalento candidato={c} t={t} />
-
-      {/* Entrevista con EVA — vista 360° (Sprint 4) */}
-      <EntrevistaPanel candidatoId={id} t={t} />
     </div>
   );
 }
