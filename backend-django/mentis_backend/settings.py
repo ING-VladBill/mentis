@@ -20,7 +20,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # CSRF: dominios de confianza para el admin en producción (Railway/HTTPS)
 _csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()]
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,10.0.2.2').split(',')
 
 # ------------------------------------------
 # APLICACIONES
@@ -166,6 +166,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',   # React (Vite)
     'http://localhost:3000',   # React alternativo
     'http://localhost:8081',   # Android emulador
+    'http://10.0.2.2:5173',   # React (Vite) - Android Studio
 ]
 # En producción se agregan orígenes extra desde la variable de entorno
 # CORS_EXTRA_ORIGINS (separados por coma). Ej: https://mentis.vercel.app
