@@ -1,5 +1,5 @@
 # ==========================================
-# mentis_backend/urls.py (Sprint 2 - completo)
+# mentis_backend/urls.py (Sprint 4 - completo)
 # ==========================================
 
 from django.contrib import admin
@@ -11,6 +11,7 @@ from rest_framework.routers import DefaultRouter
 from vacantes.views import (
     VacanteViewSet, AreaViewSet,
     formulario_publico_info, formulario_publico_postular,
+    formulario_publico_vacantes,
 )
 from candidatos.views import CandidatoViewSet, TagViewSet, notificar_avance_examen
 from autenticacion.views import (
@@ -54,6 +55,7 @@ urlpatterns = [
     # ------------------------------------------
     # FORMULARIO PÚBLICO (sin login)
     # ------------------------------------------
+    path('api/vacantes/publicas/',             formulario_publico_vacantes, name='vacantes-publicas'),
     path('api/postular/<str:codigo>/',         formulario_publico_info,     name='postular-info'),
     path('api/postular/<str:codigo>/enviar/',  formulario_publico_postular, name='postular-enviar'),
     
