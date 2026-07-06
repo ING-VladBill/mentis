@@ -113,7 +113,7 @@ export default function EntrevistasIA() {
             const cfg = ESTADO_CFG[e.estado] || ESTADO_CFG.pendiente;
             return (
               <div key={e.id} style={{ ...card, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.04}s`, transition: 'transform 0.15s ease, box-shadow 0.15s ease' }}
-                onClick={() => navigate(`/candidatos/${e.candidato_id}`)}
+                onClick={() => navigate(`/entrevistas/${e.id}`)}
                 onMouseEnter={ev => { ev.currentTarget.style.transform = 'translateY(-2px)'; ev.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)'; }}
                 onMouseLeave={ev => { ev.currentTarget.style.transform = 'translateY(0)'; ev.currentTarget.style.boxShadow = 'none'; }}>
 

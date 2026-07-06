@@ -91,9 +91,17 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
+        # ── OPTIMIZACIÓN DE LATENCIA ──
+        # La BD está en Railway (remota). Sin esto, Django abría una conexión
+        # NUEVA a MySQL en CADA request: handshake TCP+auth remoto de cientos
+        # de ms antes de ejecutar cualquier query. CONN_MAX_AGE mantiene la
+        # conexión viva y la reutiliza entre requests (conexiones persistentes).
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'connect_timeout': 10,
         },
     }
 }

@@ -17,6 +17,7 @@ import Areas          from './pages/Areas';
 import Ranking        from './pages/Ranking';
 import BancoTalento         from './pages/BancoTalento';
 import EntrevistasIA        from './pages/EntrevistasIA';
+import EntrevistaDetalle    from './pages/EntrevistaDetalle';
 import CargaMasiva    from './pages/CargaMasiva';
 import Postular       from './pages/Postular';
 import Evaluaciones   from './pages/Evaluaciones';
@@ -356,6 +357,7 @@ function Layout() {
   const vacMatch    = location.pathname.match(/^\/vacantes\/(\d+)$/);
   const detailMatch = location.pathname.match(/^\/candidatos\/(\d+)$/);
   const evalMatch   = location.pathname.match(/^\/evaluaciones\/(\d+)$/);
+  const entMatch    = location.pathname.match(/^\/entrevistas\/(\d+)$/);
   const meta = editMatch
     ? { title: 'Editar vacante',     subtitle: `Modificando vacante #${editMatch[1]}` }
     : vacMatch
@@ -364,6 +366,8 @@ function Layout() {
     ? { title: 'Detalle candidato',  subtitle: `Candidato #${detailMatch[1]}` }
     : evalMatch
     ? { title: 'Detalle de examen',  subtitle: `Examen #${evalMatch[1]}` }
+    : entMatch
+    ? { title: 'Detalle de entrevista', subtitle: `Entrevista con EVA #${entMatch[1]}` }
     : (PAGE_META[location.pathname] || { title: 'MENTIS', subtitle: '' });
 
   return (
@@ -388,6 +392,7 @@ function Layout() {
             <Route path="/ranking"               element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
             <Route path="/banco-talento"         element={<ProtectedRoute><BancoTalento /></ProtectedRoute>} />
             <Route path="/entrevistas"           element={<ProtectedRoute><EntrevistasIA /></ProtectedRoute>} />
+            <Route path="/entrevistas/:id"       element={<ProtectedRoute><EntrevistaDetalle /></ProtectedRoute>} />
             <Route path="/evaluaciones"          element={<ProtectedRoute><Evaluaciones /></ProtectedRoute>} />
             <Route path="/evaluaciones/:id"      element={<ProtectedRoute><ExamenDetalle /></ProtectedRoute>} />
             <Route path="/auditoria"             element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
